@@ -1,5 +1,5 @@
-// ui.js — chrome: corner telemetry, inspector dock (tabs + drag), toasts, info card,
-// onboarding overlay, settings binding. All DOM lives here; main.js owns state.
+// ui.js — chrome: corner telemetry, inspector dock (tabs + drag), layer chips, toasts,
+// info card, Tonight cards, onboarding overlay, settings binding. All DOM lives here.
 import { compass16, fmtAlt } from './astro.js';
 
 const $ = (id) => document.getElementById(id);
@@ -29,6 +29,32 @@ export function createUI(handlers) {
       setDock(true);
     });
   });
+  function setTab(name) {
+    const btn = dock.querySelector(`.tab[data-tab="${name}"]`);
+    if (btn) btn.click();
+  }
+
+  /* ---- tap a list row → guide to the object ---- */
+  dock.addEventListener('click', (e) => {
+    const row = e.target.closest('li[data-loc]');
+    if (row && handlers.locate) {
+      const [alt, az, ...rest] = row.dataset.loc.split(',');
+      handlers.locate({ alt: +alt, az: +az, label: rest.join(',') });
+    }
+  });
+
+  /* ---- layer chips ---- */
+  function bindChips(state, onChange) {
+    document.querySelectorAll('#chips .chip').forEach((chip) => {
+      const key = chip.dataset.layer;
+      chip.classList.toggle('on', key === 'night' ? state.night : !!state.layers[key]);
+      chip.addEventListener('click', () => {
+        if (key === 'night') onChange({ night: !state.night });
+        else onChange({ layers: { ...state.layers, [key]: !state.layers[key] } });
+        chip.classList.toggle('on', key === 'night' ? state.night : state.layers[key]); // state already patched by onChange
+      });
+    });
+  }
 
   /* ---- toasts ---- */
   function toast(msg, ms = 3400) {
@@ -70,30 +96,52 @@ export function createUI(handlers) {
     if (item.kind === 'star') { row('object', d.name || 'unnamed star'); row('type', 'star'); row('mag', d.mag.toFixed(1)); row('alt / az', `${fmtAlt(d.alt)} / ${d.az.toFixed(1)}°`); }
     else if (item.kind === 'satellite') { row('object', d.name); row('type', 'satellite'); row('range', d.rangeKm.toFixed(0) + ' km'); row('alt / az', `${fmtAlt(d.alt)} / ${d.az.toFixed(1)}°`); }
     else if (item.kind === 'plane') { row('flight', d.flight); row('altitude', d.altFt != null ? d.altFt.toLocaleString() + ' ft' : '—'); row('speed', d.gsKt != null ? d.gsKt.toFixed(0) + ' kt' : '—'); row('distance', d.distKm.toFixed(1) + ' km'); row('alt / az', `${fmtAlt(d.alt)} / ${d.az.toFixed(1)}°`); }
+    else if (item.kind === 'dso') { row('object', d.altName ? `${d.name} — ${d.altName}` : d.name); row('type', d.type); if (d.mag != null) row('mag', d.mag.toFixed(1)); if (d.dim) row('size', d.dim + '′'); row('alt / az', `${fmtAlt(d.alt)} / ${d.az.toFixed(1)}°`); }
     else { row('object', d.name); row('type', item.kind); if (d.mag != null) row('mag', d.mag.toFixed(1)); if (d.phase != null) row('illuminated', (d.phase * 100).toFixed(0) + '%'); row('alt / az', `${fmtAlt(d.alt)} / ${d.az.toFixed(1)}°`); }
-    card.innerHTML = `<button class="x" aria-label="close">×</button><div class="grid">${rows}</div>`;
+    const label = d.name || d.flight || 'object';
+    card.innerHTML = `<button class="x" aria-label="close">×</button><div class="grid">${rows}</div><button class="pill loc">Guide me ▸</button>`;
     card.querySelector('.x').addEventListener('click', () => { card.hidden = true; });
+    card.querySelector('.loc').addEventListener('click', () => { card.hidden = true; handlers.locate({ alt: d.alt, az: d.az, label }); });
     card.hidden = false;
   }
 
   /* ---- lists in dock panels ---- */
-  function li(main, sub) { return `<li><span>${main}</span><span class="sub">${sub}</span></li>`; }
+  function li(main, sub, locData) {
+    return `<li${locData ? ` data-loc="${locData}"` : ''}><span>${main}${locData ? '<span class="go">▸</span>' : ''}</span><span class="sub">${sub}</span></li>`;
+  }
   function skyList(bodies, stars) {
     $('skyList').innerHTML =
-      bodies.map((b) => li(b.name, `${fmtAlt(b.alt)} · az ${b.az.toFixed(0)}°`)).join('') +
-      stars.map((s) => li(s.name || `mag ${s.mag}`, `star · ${fmtAlt(s.alt)} · az ${s.az.toFixed(0)}°`)).join('') ||
+      bodies.map((b) => li(b.name, `${fmtAlt(b.alt)} · az ${b.az.toFixed(0)}°`, `${b.alt},${b.az},${b.name}`)).join('') +
+      stars.map((s) => li(s.name || `mag ${s.mag}`, `star · ${fmtAlt(s.alt)} · az ${s.az.toFixed(0)}°`, `${s.alt},${s.az},${s.name || 'star'}`)).join('') ||
       '<li class="empty">nothing above the horizon band</li>';
   }
   function satList(sats, meta) {
     $('satMeta').textContent = meta ? `${meta.count} tracked · ${meta.source}${meta.stale ? ' (stale snapshot)' : ''}` : '';
-    $('satList').innerHTML = sats.slice(0, 12).map((s) => li(s.name, `${fmtAlt(s.alt)} · az ${s.az.toFixed(0)}° · ${s.rangeKm.toFixed(0)} km`)).join('') ||
+    $('satList').innerHTML = sats.slice(0, 12).map((s) => li(s.name, `${fmtAlt(s.alt)} · az ${s.az.toFixed(0)}° · ${s.rangeKm.toFixed(0)} km`, `${s.alt},${s.az},${s.name}`)).join('') ||
       '<li class="empty">no tracked satellite above the horizon</li>';
   }
   function planeList(planes, status, ageMs) {
     const age = ageMs ? Math.round((Date.now() - ageMs) / 1000) : null;
     $('planeMeta').textContent = status === 'ok' ? `${planes.length} in 50 nm · updated ${age}s ago` : status === 'limited' ? 'rate-limited — backing off' : status === 'error' ? 'feed unavailable — retrying' : '';
-    $('planeList').innerHTML = (planes || []).slice(0, 12).map((p) => li(p.flight, `${p.altFt != null ? p.altFt.toLocaleString() + ' ft · ' : ''}${p.gsKt ? p.gsKt.toFixed(0) + ' kt · ' : ''}${p.distKm.toFixed(0)} km ${compass16(p.az)}`)).join('') ||
+    $('planeList').innerHTML = (planes || []).slice(0, 12).map((p) => li(p.flight, `${p.altFt != null ? p.altFt.toLocaleString() + ' ft · ' : ''}${p.gsKt ? p.gsKt.toFixed(0) + ' kt · ' : ''}${p.distKm.toFixed(0)} km ${compass16(p.az)}`, `${p.alt},${p.az},${p.flight}`)).join('') ||
       (status === 'ok' ? '<li class="empty">no aircraft in range</li>' : '');
+  }
+
+  /* ---- Tonight cards ---- */
+  function tonight(t) {
+    if (!t) return;
+    const el = $('tonightBody');
+    const cardHtml = (title, rows) => `<div class="tcard"><h4>${title}</h4><div class="grid">${rows}</div></div>`;
+    const row = (k, v) => `<div class="k">${k}</div><div class="v">${v}</div>`;
+    let html = '';
+    if (t.sun) html += cardHtml('Sun', row('sunrise', t.sun.sunrise ?? '—') + row('sunset', t.sun.sunset ?? '—') + row('astro dark', `${t.sun.darkStart ?? '—'} → ${t.sun.darkEnd ?? '—'}`));
+    if (t.moon) html += cardHtml('Moon', row('phase', `${t.moon.phaseName ?? '—'} (${((t.moon.illum ?? 0) * 100).toFixed(0)}%)`) + t.moon.quarters.map((q) => row(q.name.toLowerCase(), q.day)).join(''));
+    if (t.planets) html += cardHtml('Planets', t.planets.map((p) => row(`${p.name}${p.up ? ' • up now' : ''}`, `mag ${p.mag?.toFixed(1) ?? '—'} · ${p.visibility ?? ''} · ↑${p.rise ?? '—'} ↓${p.set ?? '—'}`)).join(''));
+    if (t.showers) {
+      const act = t.showers.filter((s) => s.active), next = t.showers[0];
+      html += cardHtml('Meteors', (act.length ? act : [next]).slice(0, 3).map((s) => row(s.name + (s.peaking ? ' · PEAK' : ''), `ZHR ${s.zhr} · peak ${s.peak}${s.alt != null ? ` · radiant ${fmtAlt(s.alt)} az ${s.az.toFixed(0)}°` : ''}`)).join(''));
+    }
+    el.innerHTML = html || '<div class="meta">computing…</div>';
   }
 
   /* ---- settings ---- */
@@ -134,5 +182,5 @@ export function createUI(handlers) {
     });
   }
 
-  return { toast, statusDot, telemetry, compassTape, showInfo, skyList, satList, planeList, bindSettings, onboarding, setDock };
+  return { toast, statusDot, telemetry, compassTape, showInfo, skyList, satList, planeList, tonight, bindChips, bindSettings, onboarding, setDock, setTab };
 }
