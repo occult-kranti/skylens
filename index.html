@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#050608">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SkyLens — point at the sky, name everything</title>
+<meta name="description" content="Live AR sky tracker: stars, planets, satellites and aircraft, identified in your phone camera. Open source, no install.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%2358c6ff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ffe9b0'/%3E%3C/svg%3E">
+</head>
+<body data-sun="night">
+
+<div id="backdrop"></div>
+<video id="cam" autoplay playsinline muted></video>
+<canvas id="sky"></canvas>
+
+<!-- corner telemetry -->
+<div class="corner" id="cTL"><span id="brand">SKYLENS</span><br><span class="dim" id="telTime">--:--:-- UTC</span></div>
+<div class="corner" id="cTR"><span id="telAim">--</span><br><span class="dim" id="telPos">locating…</span><br><span class="dim" id="telCount"></span></div>
+<div class="corner" id="cBL">
+  <div class="feeds">
+    <span class="f"><span class="dot st-off" id="dotTle"></span>TLE</span>
+    <span class="f"><span class="dot st-off" id="dotAdsb"></span>ADS-B</span>
+    <span class="f"><span class="dot st-off" id="dotCam"></span>CAM</span>
+    <span class="f"><span class="dot st-off" id="dotMotion"></span>IMU</span>
+  </div>
+</div>
+
+<!-- tap-to-identify card -->
+<div id="infocard" hidden></div>
+<div id="toasts"></div>
+
+<!-- inspector dock -->
+<div id="dock">
+  <div id="dockHandle" role="button" aria-label="toggle panel"></div>
+  <div id="dockHead">
+    <div id="tapeStrip"></div>
+    <div id="tapeReadout">—</div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="sky">Sky</button>
+    <button class="tab" data-tab="sats">Sats</button>
+    <button class="tab" data-tab="planes">Planes</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </div>
+
+  <div class="panel active" data-panel="sky"><ul id="skyList"></ul></div>
+
+  <div class="panel" data-panel="sats">
+    <div class="meta" id="satMeta"></div>
+    <ul id="satList"></ul>
+  </div>
+
+  <div class="panel" data-panel="planes">
+    <div class="meta" id="planeMeta"></div>
+    <ul id="planeList"></ul>
+  </div>
+
+  <div class="panel" data-panel="settings">
+    <div class="setrow"><label for="setFov">Field of view</label><input type="range" id="setFov" min="30" max="100" step="1"><span class="val" id="fovVal"></span></div>
+    <div class="setrow"><label for="setMag">Star magnitude limit</label><input type="range" id="setMag" min="2" max="4.6" step="0.1"><span class="val" id="magVal"></span></div>
+    <div class="setrow"><label for="setGrid">Alt-az grid</label><input type="checkbox" id="setGrid"></div>
+    <div class="setrow"><label for="setLabels">Labels</label><input type="checkbox" id="setLabels"></div>
+    <div class="setrow"><label for="setSats">Satellites</label><input type="checkbox" id="setSats"></div>
+    <div class="setrow"><label for="setPlanes">Aircraft</label><input type="checkbox" id="setPlanes"></div>
+    <div class="setrow"><label for="setNight">Night-vision (red)</label><input type="checkbox" id="setNight"></div>
+    <div class="setrow"><label>Location</label>
+      <div class="locrow">
+        <input id="locLat" placeholder="lat" inputmode="decimal">
+        <input id="locLon" placeholder="lon" inputmode="decimal">
+        <button id="setLoc">Set</button>
+        <button id="locGps">GPS</button>
+      </div>
+    </div>
+    <div class="about">
+      SkyLens v0.1 — open source (MIT).<br>
+      Star catalog: HYG Database v4.1 · Satellites: <a href="https://celestrak.org" rel="noopener">CelesTrak</a> TLEs, propagated by satellite.js (SGP4) ·
+      Flight data: <a href="https://avioadsb.org" rel="noopener">AvioADSB</a> (CC BY 4.0), community ADS-B — not for navigation ·
+      Ephemerides: astronomy-engine (MIT).<br>
+      Everything runs on your device — no account, no uploads.<br>
+      <a href="#" id="selftestLink">Run diagnostics &amp; stress tests</a>
+    </div>
+  </div>
+</div>
+
+<!-- first-run consent -->
+<div id="onboard" hidden>
+  <div class="sheet">
+    <h1>SKYLENS</h1>
+    <p class="sub">Point your phone at the sky. Name every star, satellite and plane.</p>
+    <ul>
+      <li><b>camera</b> live backdrop for augmented reality</li>
+      <li><b>motion</b> aims the overlay where you point</li>
+      <li><b>location</b> computes your local sky — never leaves the device</li>
+    </ul>
+    <div class="row">
+      <button id="btnAR">Enable AR view</button>
+      <button id="btnManual">Manual mode</button>
+    </div>
+    <div id="httpsWarn" hidden>Camera &amp; motion need HTTPS — only Manual mode is available here.</div>
+    <div class="micro">No account · no uploads · open source</div>
+  </div>
+</div>
+
+<script>
+/* satellite.js loader: local vendor first, pinned CDN fallback (keeps repo text-only) */
+window.__satReady = new Promise((resolve) => {
+  const inject = (src, ok, fail) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = () => resolve(ok); s.onerror = fail;
+    document.head.appendChild(s);
+  };
+  inject('vendor/satellite.min.js', 'local', () =>
+    inject('https://cdn.jsdelivr.net/npm/satellite.js@4.1.4/dist/satellite.min.js', 'cdn', () => resolve('none')));
+});
+</script>
+<script>
+/* astronomy-engine loader: local vendor first, pinned CDN fallback */
+window.__aeReady = import('./vendor/astronomy.js').catch(() =>
+  import('https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/esm/astronomy.js'));
+window.__aeReady.catch(() => {});
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
