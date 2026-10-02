@@ -1,5 +1,5 @@
 // SkyLens node test suite — math vs astronomy-engine oracle, SGP4 structural checks,
-// projection/attitude fixed cases, data integrity, stress timings.
+// projection/attitude fixed cases, data integrity, events engine, stress timings.
 // Run: node tests/node/run.mjs   (exit code = number of failures)
 // Note: needs vendor libs present (vendor/astronomy.js, vendor/satellite.esm.js) — see vendor/README.md.
 import { readFileSync } from 'fs';
@@ -154,6 +154,33 @@ for (const lat of [20, 51.5, -30]) {
   }
   const ms = performance.now() - t0;
   T(`S1 stress: ${synth.length} sats × 30 steps < 10 s`, ms < 10000, `${ms.toFixed(0)} ms (${(ms / 30 / synth.length * 1000).toFixed(2)} µs/sat/step)`);
+}
+
+/* ---------- events engine (v0.2) ---------- */
+{
+  const EV = await import('../../js/events.js');
+  const d2 = new Date('2026-10-03T12:00:00Z');
+  const sun = EV.sunEvents(AE, d2, 51.5, 0);
+  T('sunEvents: London Oct sunrise/sunset sane', sun.sunrise >= '05:30' && sun.sunrise <= '06:45' && sun.sunset >= '17:15' && sun.sunset <= '19:00', JSON.stringify(sun));
+  const moon = EV.moonEvents(AE, d2);
+  T('moonEvents: phase + 4 ordered quarters', !!moon.phaseName && moon.quarters.length === 4 && moon.quarters.every((q, i, a) => i === 0 || a[i - 1].date < q.date),
+    `${moon.phaseName} ${(moon.illum * 100).toFixed(0)}% → ${moon.quarters.map((q) => q.name.split(' ')[0]).join(',')}`);
+  const pl = EV.planetEvents(AE, d2, 51.5, 0);
+  T('planetEvents: 5 planets, finite mag/elong', pl.length === 5 && pl.every((p) => Number.isFinite(p.mag) && Number.isFinite(p.elong)));
+  T('meteors: Perseids active Aug 10', EV.activeShowers(new Date('2026-08-10T12:00:00Z')).find((s) => s.name === 'Perseids').active === true);
+  T('meteors: Geminids peak Dec 14', EV.activeShowers(new Date('2026-12-14T12:00:00Z')).find((s) => s.name === 'Geminids').peaking === true);
+  T('meteors: radiant alt/az present with location', EV.activeShowers(d2, 40.7, -74).every((s) => Number.isFinite(s.alt) && Number.isFinite(s.az)));
+}
+
+/* ---------- v0.2 datasets ---------- */
+{
+  const consts = JSON.parse(readFileSync(path.join(root, 'data/constellations.json'), 'utf8'));
+  const ori = consts.find((c) => c.id === 'Ori');
+  const flat = ori ? ori.lines.flat() : [];
+  T('constellations.json: 89, Orion↔Betelgeuse vertex', consts.length === 89 && flat.some((p) => Math.abs(p[0] - 5.92) < 0.05 && Math.abs(p[1] - 7.41) < 0.1), `${consts.length} constellations`);
+  const dsos = JSON.parse(readFileSync(path.join(root, 'data/dsos.json'), 'utf8'));
+  const m31 = dsos.find((x) => x.name === 'M31');
+  T('dsos.json: 110 Messier, M31 correct', dsos.length === 110 && Math.abs(m31.ra - 0.7117) < 0.01 && Math.abs(m31.dec - 41.267) < 0.1 && m31.type === 'galaxy', `M31 ra=${m31.ra} dec=${m31.dec}`);
 }
 
 console.log(`\nRESULT ${pass} pass / ${fail} fail`);
