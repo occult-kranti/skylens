@@ -1,0 +1,11 @@
+{
+  "name": "skylens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Live-sky AR tracker: stars, planets, satellites and aircraft in your phone camera. Zero-build static site.",
+  "scripts": {
+    "test": "node tests/node/run.mjs",
+    "serve": "python3 -m http.server 8000"
+  }
+}

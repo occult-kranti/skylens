@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyLens diagnostics</title>
+<style>
+  body { background: #0a0b0e; color: #e8e8e8; font: 13px/1.6 ui-monospace, Menlo, monospace; margin: 0; padding: 24px; }
+  h1 { font-size: 15px; letter-spacing: 0.25em; } h2 { font-size: 12px; color: #9ab; margin: 22px 0 6px; letter-spacing: 0.15em; }
+  table { border-collapse: collapse; width: 100%; max-width: 980px; }
+  td { border-bottom: 1px solid #222; padding: 4px 8px; vertical-align: top; }
+  td:first-child { color: #9ab; white-space: nowrap; }
+  .ok { color: #4caf50; } .fail { color: #f44336; } .info { color: #58c6ff; }
+  #summary { font-size: 16px; margin: 16px 0; }
+  button { background: #14161c; color: #e8e8e8; border: 1px solid #2e3038; border-radius: 20px; padding: 8px 18px; font: inherit; cursor: pointer; }
+  canvas { display: none; }
+</style>
+</head>
+<body>
+<h1>SKYLENS DIAGNOSTICS</h1>
+<div id="summary">running…</div>
+<h2>FUNCTIONAL</h2><table id="func"></table>
+<h2>EDGE CASES</h2><table id="edge"></table>
+<h2>ENVIRONMENT</h2><table id="env"></table>
+<h2>STRESS</h2><table id="stress"></table>
+<p><button id="rerun">re-run all</button></p>
+<canvas id="bench" width="800" height="450"></canvas>
+
+<script>
+window.__satReady = new Promise((resolve) => {
+  const inject = (src, ok, fail) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = () => resolve(ok); s.onerror = fail;
+    document.head.appendChild(s);
+  };
+  inject('vendor/satellite.min.js', 'local', () =>
+    inject('https://cdn.jsdelivr.net/npm/satellite.js@4.1.4/dist/satellite.min.js', 'cdn', () => resolve('none')));
+});
+window.__aeReady = import('./vendor/astronomy.js').catch(() =>
+  import('https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/esm/astronomy.js'));
+window.__aeReady.catch(() => {});
+</script>
+<script type="module">
+import * as X from './js/astro.js';
+import { parseTLE, propagateNow, loadRecsFromList } from './js/satellites.js';
+import { loadStars, visibleStars, starCount } from './js/sky.js';
+import { createRenderer, PALETTES } from './js/render.js';
+
+const AE = await window.__aeReady; // astronomy-engine via loader (local → CDN fallback)
+
+const rows = { func: [], edge: [], env: [], stress: [] };
+let failures = 0;
+function rec(group, name, ok, info = '', kind = null) {
+  const cls = kind === 'info' ? 'info' : ok ? 'ok' : 'fail';
+  if (kind !== 'info' && !ok) failures++;
+  rows[group].push(`<tr><td>${name}</td><td class="${cls}">${kind === 'info' ? 'info' : ok ? 'pass' : 'FAIL'}</td><td>${info}</td></tr>`);
+}
+const near = (a, b, tol) => Math.abs(a - b) <= tol;
+
+async function run() {
+  await window.__satReady; // satellite.js (local or CDN)
+  failures = 0; Object.keys(rows).forEach((k) => (rows[k] = []));
+
+  /* ---------- functional ---------- */
+  let r = X.attitudeFromSensors(0, 90, 0, 0);
+  rec('func', 'attitude: portrait north → az 0, alt 0', near(r.az, 0, 0.5) && near(r.alt, 0, 0.5), `az=${r.az.toFixed(2)} alt=${r.alt.toFixed(2)}`);
+  r = X.attitudeFromSensors(90, 90, 0, 0);
+  rec('func', 'attitude: α=90 → west (az 270)', near(r.az, 270, 0.5), `az=${r.az.toFixed(2)}`);
+  r = X.attitudeFromSensors(0, 0, 0, 0);
+  rec('func', 'attitude: flat screen-up → alt −90', near(r.alt, -90, 0.5), `alt=${r.alt.toFixed(2)}`);
+  r = X.attitudeFromSensors(45, 90, 0, 90);
+  rec('func', 'attitude: screen rotation preserves boresight', near(r.az, 315, 0.5) && near(r.alt, 0, 0.5), `az=${r.az.toFixed(2)}`);
+
+  const d = new Date();
+  const pol = X.radecToAltAz(2.52975, 89.26411, 51.5, 0, d);
+  rec('func', 'Polaris ≈ latitude, az ≈ 0', near(pol.alt, 51.5, 1.0) && (pol.az < 1.5 || pol.az > 358.5), `alt=${pol.alt.toFixed(2)} az=${pol.az.toFixed(2)}`);
+
+  const ra = X.gmstHours(d), m = X.radecToAltAz(ra, 20, 40, 0, d);
+  rec('func', 'meridian transit → alt 70 az 180', near(m.alt, 70, 0.05) && near(m.az, 180, 0.05), `alt=${m.alt.toFixed(2)} az=${m.az.toFixed(2)}`);
+
+  let worst = 0;
+  for (let i = 0; i < 60; i++) {
+    const t = new Date(Date.UTC(2026, i % 12, (i % 27) + 1, i % 24, (7 * i) % 60));
+    const lat = -60 + (i * 37) % 120, lon = -170 + (i * 53) % 340, raH = (i * 0.73) % 24, dec = -70 + (i * 29) % 140;
+    const o = new AE.Observer(lat, lon, 0);
+    const hh = AE.Horizon(AE.MakeTime(t), o, raH, dec, null);
+    const mine = X.radecToAltAz(raH, dec, lat, lon, t);
+    let daz = Math.abs(mine.az - hh.azimuth); daz = Math.min(daz, 360 - daz);
+    worst = Math.max(worst, daz, Math.abs(mine.alt - hh.altitude));
+  }
+  rec('func', 'alt/az matches astronomy-engine (60 cases)', worst < 0.6, `worst=${worst.toFixed(3)}°`);
+
+  const basis = X.makeBasis(0, 0), tanH = Math.tan(30 * X.D2R), tanV = tanH * 9 / 16;
+  const pc = X.projectVec(X.vecFromAltAz(0, 0), basis, tanH, tanV, 800, 450);
+  rec('func', 'projection: center → center', near(pc.x, 400, 0.5) && near(pc.y, 225, 0.5));
+  rec('func', 'projection: behind → culled', X.projectVec(X.vecFromAltAz(0, 180), basis, tanH, tanV, 800, 450) === null);
+
+  const pl = X.planeAltAz(40, 0, 41, 0, 10668);
+  rec('func', 'plane geometry: due north, ~5° up', pl.az < 0.5 && near(pl.alt, 5.0, 0.6), `az=${pl.az.toFixed(2)} alt=${pl.alt.toFixed(2)}`);
+
+  /* ---------- data ---------- */
+  try {
+    const n = await loadStars('data/stars.json');
+    rec('func', 'star catalog loads', n > 900, `${n} stars`);
+  } catch (e) { rec('func', 'star catalog loads', false, String(e)); }
+
+  let sats = [];
+  try {
+    const txt = await fetch('data/tle-snapshot.json').then((r) => r.json());
+    const list = parseTLE(txt.satellites.map((s) => `${s.name}\n${s.l1}\n${s.l2}`).join('\n'));
+    loadRecsFromList(list); // direct load — no network in diagnostics
+    rec('func', 'TLE snapshot parses', list.length >= 150, `${list.length} satellites`);
+    sats = list;
+  } catch (e) { rec('func', 'TLE snapshot parses', false, String(e)); }
+
+  /* ---------- edge ---------- */
+  const hp = X.radecToAltAz(6.75, -16.7, 89.9, 100, d);
+  rec('edge', 'E6 high latitude 89.9°: finite', Number.isFinite(hp.alt) && Number.isFinite(hp.az), `alt=${hp.alt.toFixed(2)}`);
+  const dl1 = X.radecToAltAz(6.75, -16.7, 40, 179.99, d);
+  const dl2 = X.radecToAltAz(6.75, -16.7, 40, -179.99, d);
+  rec('edge', 'E7 date line continuity', near(dl1.alt, dl2.alt, 0.05) && near(Math.abs(dl1.az - dl2.az), 0, 0.2), `Δalt=${Math.abs(dl1.alt - dl2.alt).toFixed(3)}`);
+  const hn = X.radecToAltAz(0, 0, -89.9, 0, d);
+  rec('edge', 'E6 south pole finite', Number.isFinite(hn.alt), `alt=${hn.alt.toFixed(2)}`);
+
+  if (sats.length) {
+    const okNow = propagateNow(new Date(), 51.5, 0, -90);
+    rec('edge', 'E9/SGP4: propagate full snapshot, finite', okNow.every((s) => Number.isFinite(s.alt) && Number.isFinite(s.az) && Number.isFinite(s.rangeKm)), `${okNow.length} above horizon`);
+    const before = propagateNow(new Date(Date.now() - 12 * 3600e3), 51.5, 0, -90);
+    const after = propagateNow(new Date(Date.now() + 12 * 3600e3), 51.5, 0, -90);
+    rec('edge', 'E9 epoch ±12 h propagation finite', before.length >= 0 && after.length >= 0, `${before.length}/${after.length} visible`);
+    const elOK = propagateNow(new Date(), 0, 0, -90).every((s) => s.alt >= -90.01 && s.alt <= 90.01 && s.az >= -0.01 && s.az < 360.01);
+    rec('edge', 'SGP4 look-angle ranges valid', elOK);
+  }
+  try {
+    const bad = window.satellite.twoline2satrec('1 garbage', '2 garbage');
+    const pv = window.satellite.propagate(bad, new Date());
+    rec('edge', 'E10 malformed TLE quarantined', !pv || !pv.position || !Number.isFinite(pv.position.x));
+  } catch { rec('edge', 'E10 malformed TLE quarantined', true, 'threw (caught)'); }
+
+  /* ---------- environment ---------- */
+  rec('env', 'secure context (HTTPS)', window.isSecureContext, '', window.isSecureContext ? 'info' : null);
+  rec('env', 'deviceorientation events', 'DeviceOrientationEvent' in window, '', 'info');
+  rec('env', 'absolute orientation event', 'ondeviceorientationabsolute' in window || true, 'listener-based detection at runtime', 'info');
+  rec('env', 'camera API', !!navigator.mediaDevices?.getUserMedia, '', 'info');
+  rec('env', 'geolocation API', !!navigator.geolocation, '', 'info');
+  rec('env', 'motion permission API (iOS)', typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function' ? 'present' : 'not required on this device', '', 'info');
+
+  /* ---------- stress ---------- */
+  if (sats.length) {
+    const t0 = performance.now();
+    for (let i = 0; i < 30; i++) propagateNow(new Date(Date.now() + i * 2000), 51.5, 0, -90);
+    const dt = performance.now() - t0;
+    rec('stress', `S1 snapshot×30 steps`, dt < 3000, `${dt.toFixed(0)} ms for ${sats.length}×30 propagations`);
+    const t1 = performance.now();
+    const synth = [];
+    for (let i = 0; i < 18; i++) for (const s of sats) synth.push(s); // ~3,114 entries
+    const recsPre = synth.map((s) => { try { return window.satellite.twoline2satrec(s.l1, s.l2); } catch { return null; } }).filter(Boolean);
+    const t2 = performance.now();
+    for (let i = 0; i < 5; i++) {
+      const gmst = window.satellite.gstime(new Date());
+      const obsGd = { longitude: 0, latitude: 0.9, height: 0 };
+      for (const rec of recsPre) {
+        try {
+          const pv = window.satellite.propagate(rec, new Date());
+          if (pv?.position) window.satellite.ecfToLookAngles(obsGd, window.satellite.eciToEcf(pv.position, gmst));
+        } catch {}
+      }
+    }
+    const dt2 = performance.now() - t2;
+    rec('stress', `S1+ ${recsPre.length} sats × 5 steps (recs prebuilt)`, dt2 < 8000, `${dt2.toFixed(0)} ms propagate, ${(t2 - t1).toFixed(0)} ms parse`);
+  }
+  {
+    const canvas = document.getElementById('bench');
+    const renderer = createRenderer(canvas);
+    const many = [];
+    for (let i = 0; i < 10000; i++) many.push({ alt: Math.random() * 180 - 90, az: Math.random() * 360, mag: Math.random() * 5, name: null });
+    const scene = { basis: X.makeBasis(200, 30), tanH: Math.tan(30 * X.D2R), tanV: Math.tan(30 * X.D2R) * 450 / 800, stars: many, bodies: [], sats: [], planes: [], layers: { grid: true, labels: true, sats: true, planes: true }, palette: PALETTES.normal, centerAz: 200 };
+    const t0 = performance.now();
+    for (let i = 0; i < 60; i++) renderer.draw(scene);
+    const per = (performance.now() - t0) / 60;
+    rec('stress', 'S2 10,000-star render frame', per < 33, `${per.toFixed(1)} ms/frame`);
+  }
+  if (starCount()) {
+    const t0 = performance.now();
+    for (let i = 0; i < 60; i++) visibleStars(new Date(), 40.7, -74, 4.6);
+    rec('stress', 'star alt/az pass (catalog × 60 frames)', (performance.now() - t0) / 60 < 8, `${((performance.now() - t0) / 60).toFixed(2)} ms/frame`);
+  }
+
+  /* ---------- report ---------- */
+  for (const [k, html] of Object.entries(rows)) document.getElementById(k).innerHTML = html.join('');
+  const total = document.querySelectorAll('#func td, #edge td, #stress td').length / 3;
+  const s = `SKYLENS-TEST ${failures ? 'FAIL' : 'PASS'} (${total - failures}/${total})`;
+  document.getElementById('summary').textContent = s;
+  document.getElementById('summary').className = failures ? 'fail' : 'ok';
+  document.title = s;
+  console.log(JSON.stringify({ failures, total }));
+}
+
+document.getElementById('rerun').addEventListener('click', run);
+if (new URLSearchParams(location.search).has('auto')) run();
+else run();
+</script>
+</body>
+</html>
