@@ -1,8 +1,8 @@
 // sky.js — stars (HYG J2000 catalog) + Sun/Moon/planets (astronomy-engine).
 import { D2R, lstDeg, norm360 } from './astro.js';
 
-// astronomy-engine: vendored locally, pinned CDN fallback (see index.html loader)
-const AE = await (window.__aeReady || import('../vendor/astronomy.js'));
+// astronomy-engine: vendored locally, pinned CDN fallback (see index.html loader); null = degraded
+const AE = await Promise.resolve(window.__aeReady || import('../vendor/astronomy.js')).catch(() => null);
 
 let stars = []; // {raH, dec, mag, name, ra15deg, sd, cd}
 export const starCount = () => stars.length;
@@ -48,6 +48,7 @@ const BODIES = [
 
 // Slower path (VSOP ephemerides) — call at ~1 Hz, not per frame.
 export function computeBodies(date, latDeg, lonDeg) {
+  if (!AE) return [];
   const time = AE.MakeTime(date);
   const obs = new AE.Observer(latDeg, lonDeg, 0);
   const out = [];
@@ -67,6 +68,7 @@ export function computeBodies(date, latDeg, lonDeg) {
 
 // Sun altitude only — drives the time-adaptive chrome (day/dusk/night).
 export function sunAltitude(date, latDeg, lonDeg) {
+  if (!AE) return -30; // degraded → assume night styling
   const time = AE.MakeTime(date);
   const obs = new AE.Observer(latDeg, lonDeg, 0);
   const eq = AE.Equator('Sun', time, obs, true, true);
