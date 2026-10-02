@@ -44,6 +44,8 @@ window.__aeReady.catch(() => {});
 import * as X from './js/astro.js';
 import { parseTLE, propagateNow, loadRecsFromList } from './js/satellites.js';
 import { loadStars, visibleStars, starCount } from './js/sky.js';
+import { loadConstellations, loadDSOs, constellationFrame, dsoFrame } from './js/objects.js';
+import { sunEvents, moonEvents, activeShowers } from './js/events.js';
 import { createRenderer, PALETTES } from './js/render.js';
 
 const AE = await window.__aeReady; // astronomy-engine via loader (local → CDN fallback)
@@ -112,6 +114,32 @@ async function run() {
     rec('func', 'TLE snapshot parses', list.length >= 150, `${list.length} satellites`);
     sats = list;
   } catch (e) { rec('func', 'TLE snapshot parses', false, String(e)); }
+
+  /* ---------- v0.2 data + events ---------- */
+  let nConst = 0, nDso = 0;
+  try {
+    nConst = await loadConstellations('data/constellations.json');
+    rec('func', 'constellation data loads (89)', nConst === 89, `${nConst}`);
+  } catch (e) { rec('func', 'constellation data loads (89)', false, String(e)); }
+  try {
+    nDso = await loadDSOs('data/dsos.json');
+    rec('func', 'Messier/DSO data loads (110)', nDso === 110, `${nDso}`);
+  } catch (e) { rec('func', 'Messier/DSO data loads (110)', false, String(e)); }
+  if (nConst) {
+    const f = constellationFrame(new Date(), 40.7, -74);
+    rec('func', 'constellation frame computes (893 vertices)', f.length === 89 && f.every((c) => c.segs.every((s) => s.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1])))));
+  }
+  if (nDso) {
+    const f = dsoFrame(new Date(), 40.7, -74);
+    rec('func', 'DSO frame computes', f.length > 20 && f.every((d) => d.alt >= -4), `${f.length} above horizon band`);
+  }
+  try {
+    const now = new Date();
+    const mn = moonEvents(AE, now);
+    const sh = activeShowers(now, 40.7, -74);
+    const sn = sunEvents(AE, now, 40.7, -74);
+    rec('func', 'Tonight engine computes (sun/moon/meteors)', !!mn.phaseName && sh.length === 11 && !!sn.sunrise, `${mn.phaseName}, ${sn.sunrise}–${sn.sunset} UTC`);
+  } catch (e) { rec('func', 'Tonight engine computes (sun/moon/meteors)', false, String(e)); }
 
   /* ---------- edge ---------- */
   const hp = X.radecToAltAz(6.75, -16.7, 89.9, 100, d);
@@ -184,6 +212,12 @@ async function run() {
     const t0 = performance.now();
     for (let i = 0; i < 60; i++) visibleStars(new Date(), 40.7, -74, 4.6);
     rec('stress', 'star alt/az pass (catalog × 60 frames)', (performance.now() - t0) / 60 < 8, `${((performance.now() - t0) / 60).toFixed(2)} ms/frame`);
+  }
+  if (nConst) {
+    const t0 = performance.now();
+    for (let i = 0; i < 60; i++) { constellationFrame(new Date(), 40.7, -74); dsoFrame(new Date(), 40.7, -74); }
+    const per = (performance.now() - t0) / 60;
+    rec('stress', 'S3 constellation+DSO frame × 60', per < 8, `${per.toFixed(2)} ms/frame`);
   }
 
   /* ---------- report ---------- */
