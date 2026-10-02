@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SkyLens — point at the sky, name everything</title>
-<meta name="description" content="Live AR sky tracker: stars, planets, satellites and aircraft, identified in your phone camera. Open source, no install.">
+<meta name="description" content="Live AR sky tracker: stars, constellations, deep-sky objects, planets, satellites and aircraft, identified in your phone camera. Open source, no install.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -36,6 +36,17 @@
 <div id="infocard" hidden></div>
 <div id="toasts"></div>
 
+<!-- layer chips (quick toggles) -->
+<div id="chips" role="toolbar" aria-label="layers">
+  <button class="chip on" data-layer="stars">Stars</button>
+  <button class="chip on" data-layer="constellations">Constellations</button>
+  <button class="chip on" data-layer="dsos">Deep sky</button>
+  <button class="chip on" data-layer="sats">Satellites</button>
+  <button class="chip on" data-layer="planes">Aircraft</button>
+  <button class="chip on" data-layer="grid">Grid</button>
+  <button class="chip" data-layer="night">Night</button>
+</div>
+
 <!-- inspector dock -->
 <div id="dock">
   <div id="dockHandle" role="button" aria-label="toggle panel"></div>
@@ -45,19 +56,20 @@
   </div>
   <div class="tabs">
     <button class="tab active" data-tab="sky">Sky</button>
-    <button class="tab" data-tab="sats">Sats</button>
-    <button class="tab" data-tab="planes">Planes</button>
+    <button class="tab" data-tab="tonight">Tonight</button>
+    <button class="tab" data-tab="traffic">Traffic</button>
     <button class="tab" data-tab="settings">Settings</button>
   </div>
 
   <div class="panel active" data-panel="sky"><ul id="skyList"></ul></div>
 
-  <div class="panel" data-panel="sats">
+  <div class="panel" data-panel="tonight"><div id="tonightBody" class="cards"></div></div>
+
+  <div class="panel" data-panel="traffic">
+    <h3 class="sect">Satellites</h3>
     <div class="meta" id="satMeta"></div>
     <ul id="satList"></ul>
-  </div>
-
-  <div class="panel" data-panel="planes">
+    <h3 class="sect">Aircraft</h3>
     <div class="meta" id="planeMeta"></div>
     <ul id="planeList"></ul>
   </div>
@@ -79,10 +91,10 @@
       </div>
     </div>
     <div class="about">
-      SkyLens v0.1 — open source (MIT).<br>
-      Star catalog: HYG Database v4.1 · Satellites: <a href="https://celestrak.org" rel="noopener">CelesTrak</a> TLEs, propagated by satellite.js (SGP4) ·
+      SkyLens v0.2 — open source (MIT).<br>
+      Star catalog: HYG Database v4.1 · Constellations &amp; Messier objects: d3-celestial data (BSD, © Olaf Frohn) · Satellites: <a href="https://celestrak.org" rel="noopener">CelesTrak</a> TLEs, propagated by satellite.js (SGP4) ·
       Flight data: <a href="https://avioadsb.org" rel="noopener">AvioADSB</a> (CC BY 4.0), community ADS-B — not for navigation ·
-      Ephemerides: astronomy-engine (MIT).<br>
+      Ephemerides &amp; events: astronomy-engine (MIT).<br>
       Everything runs on your device — no account, no uploads.<br>
       <a href="#" id="selftestLink">Run diagnostics &amp; stress tests</a>
     </div>
