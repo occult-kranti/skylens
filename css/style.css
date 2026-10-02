@@ -223,6 +223,39 @@ body.night #btnAR { background: rgba(255, 106, 85, 0.14); box-shadow: inset 0 0.
 .micro { margin-top: 14px; font-size: 10.5px; color: var(--text-3); font-family: var(--mono); }
 #httpsWarn { margin-top: 10px; color: var(--warn); font-size: 12px; font-family: var(--mono); }
 
+/* ---------- v0.2: chips, tonight cards, sections ---------- */
+#chips {
+  position: fixed; z-index: 6; left: 0; right: 0; bottom: calc(48px + env(safe-area-inset-bottom));
+  display: flex; gap: 8px; padding: 6px 12px; overflow-x: auto; scrollbar-width: none;
+}
+#chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto; background: rgba(20, 22, 28, 0.72); border: 1px solid var(--line);
+  color: var(--text-2); border-radius: 127px; padding: 7px 14px; min-height: 36px;
+  font-family: var(--sans); font-weight: 600; font-size: 11px; letter-spacing: 0.05em;
+  cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: #05131c; }
+body.night .chip.on { color: #1c0603; }
+.panel h3.sect {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--text-3);
+  text-transform: uppercase; padding: 10px 2px 4px;
+}
+.panel li[data-loc] { cursor: pointer; }
+.panel li[data-loc]:active { background: rgba(255, 255, 255, 0.05); }
+.panel li .go { color: var(--accent); margin-left: 6px; }
+.cards { display: flex; flex-direction: column; gap: 10px; }
+.tcard {
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.tcard h4 { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.tcard .grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-family: var(--mono); font-size: 11.5px; }
+.tcard .k { color: var(--text-2); }
+.tcard .v { text-align: right; }
+#infocard .loc { width: 100%; margin-top: 10px; border-radius: 10px; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
