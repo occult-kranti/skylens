@@ -1,5 +1,5 @@
-// render.js — canvas overlay: alt-az grid, stars, bodies, satellites, planes,
-// label decluttering, tap hit-testing. Double-drawn text = legible over any camera feed.
+// render.js — canvas overlay: alt-az grid, constellation figures, stars, DSOs,
+// bodies, satellites, planes, locate guidance. Double-drawn text for legibility.
 import { vecFromAltAz, projectVec, clamp } from './astro.js';
 
 export const PALETTES = {
@@ -8,6 +8,8 @@ export const PALETTES = {
     star: (a) => `rgba(255,244,228,${a})`, starLabel: 'rgba(235,230,218,0.92)',
     planet: '#ffd9a0', sun: '#ffe9b0', moon: '#e6e8f2',
     sat: '#ffb454', plane: '#58c6ff',
+    constLine: 'rgba(140,170,255,0.30)', constLabel: 'rgba(150,180,235,0.6)', dso: 'rgba(196,170,255,0.8)',
+    highlight: '#58c6ff',
     shadow: 'rgba(0,0,0,0.9)', crosshair: 'rgba(255,255,255,0.35)',
   },
   night: { // red-shifted: preserves dark adaptation
@@ -15,6 +17,8 @@ export const PALETTES = {
     star: (a) => `rgba(255,120,90,${a})`, starLabel: 'rgba(255,140,110,0.92)',
     planet: '#ff9a6a', sun: '#ff7a50', moon: '#ff9a80',
     sat: '#ffb454', plane: '#ff8a70',
+    constLine: 'rgba(255,90,70,0.28)', constLabel: 'rgba(255,120,100,0.55)', dso: 'rgba(255,150,130,0.75)',
+    highlight: '#ff6a55',
     shadow: 'rgba(0,0,0,0.95)', crosshair: 'rgba(255,120,100,0.4)',
   },
 };
@@ -88,6 +92,45 @@ export function createRenderer(canvas) {
       }
     }
 
+    /* ---- constellation lines + labels (under the stars) ---- */
+    if (scene.layers.constellations && scene.constellations) {
+      ctx.strokeStyle = PAL.constLine; ctx.lineWidth = 1;
+      for (const c of scene.constellations) {
+        for (const seg of c.segs) {
+          ctx.beginPath(); let started = false;
+          for (const [alt, az] of seg) {
+            const p = proj(alt, az);
+            if (p) { started ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); started = true; }
+            else started = false;
+          }
+          ctx.stroke();
+        }
+        if (scene.layers.labels && c.label) {
+          const p = proj(c.label.alt, c.label.az);
+          if (p && labelOK(p.x, p.y)) text(c.name.toUpperCase(), p.x, p.y, PAL.constLabel, 9);
+        }
+      }
+    }
+
+    /* ---- deep-sky objects (Messier) ---- */
+    if (scene.layers.dsos && scene.dsos) {
+      for (const d of scene.dsos) {
+        const p = proj(d.alt, d.az);
+        if (!p) continue;
+        const rr = clamp(7 - 0.5 * (d.mag ?? 6), 2.5, 7);
+        ctx.strokeStyle = PAL.dso; ctx.lineWidth = 1;
+        if (d.type === 'galaxy' || d.type === 'galaxy cluster') { // ellipse marker for galaxies
+          ctx.beginPath(); ctx.ellipse(p.x, p.y, rr + 2, rr * 0.6, 0.6, 0, 6.2832); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 6.2832); ctx.stroke();
+          if (d.type === 'globular cluster') { ctx.beginPath(); ctx.moveTo(p.x - rr, p.y); ctx.lineTo(p.x + rr, p.y); ctx.moveTo(p.x, p.y - rr); ctx.lineTo(p.x, p.y + rr); ctx.stroke(); }
+        }
+        const lbl = d.altName ? `${d.name} ${d.altName}` : d.name;
+        if (scene.layers.labels && (d.mag ?? 9) <= 6.5 && labelOK(p.x, p.y)) text(lbl, p.x, p.y - rr - 3, PAL.dso, 9);
+        drawn.push({ x: p.x, y: p.y, r: Math.max(14, rr + 6), kind: 'dso', data: d });
+      }
+    }
+
     /* ---- stars ---- */
     if (scene.layers.stars) {
       for (const s of scene.stars) {
@@ -148,6 +191,32 @@ export function createRenderer(canvas) {
         const altTxt = pl.altFt != null ? ` ${Math.round(pl.altFt / 100) * 100 >= 1000 ? (Math.round(pl.altFt / 100) / 10).toFixed(1) + 'k' : pl.altFt}ft` : '';
         if (scene.layers.labels && labelOK(p.x, p.y)) text(pl.flight + altTxt, p.x, p.y - 8, PAL.plane, 10);
         drawn.push({ x: p.x, y: p.y, r: 14, kind: 'plane', data: pl });
+      }
+    }
+
+    /* ---- locate highlight / edge guidance ---- */
+    if (scene.highlight) {
+      const t = scene.highlight;
+      const p = proj(t.alt, t.az);
+      if (p) {
+        const pulse = 12 + 3 * Math.sin(performance.now() / 220);
+        ctx.strokeStyle = PAL.highlight; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.arc(p.x, p.y, pulse, 0, 6.2832); ctx.stroke();
+        ctx.setLineDash([]);
+        text(t.label, p.x, p.y - pulse - 6, PAL.highlight, 11);
+      } else if (scene.centerAz != null) {
+        // off-screen: chevron at the screen edge pointing toward the target
+        const dAz = ((t.az - scene.centerAz + 540) % 360) - 180;
+        const dAlt = t.alt - (scene.centerAlt ?? 0);
+        const ang = Math.atan2(-dAlt, dAz); // screen: right = 0, up = −90°
+        const ex = clamp(w / 2 + Math.cos(ang) * w, 34, w - 34);
+        const ey = clamp(h / 2 + Math.sin(ang) * h, 34, h - 34);
+        ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang);
+        ctx.strokeStyle = PAL.highlight; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(9, -7); ctx.lineTo(0, 0); ctx.lineTo(9, 7); ctx.stroke();
+        ctx.restore();
+        text(`${Math.abs(dAz).toFixed(0)}° ${dAz > 0 ? 'R' : 'L'} · ${Math.abs(dAlt).toFixed(0)}° ${dAlt > 0 ? 'up' : 'down'}`, ex, ey + 20, PAL.highlight, 10);
+        text(t.label, ex, ey - 16, PAL.highlight, 10);
       }
     }
 
