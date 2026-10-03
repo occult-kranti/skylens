@@ -17,13 +17,18 @@ export function createUI(handlers = {}) {
   let returnPanel = null, returnObjectKey = null;
   let orbitModule = null;
   let savedSignature = '', savedById = new Map();
+  let toastTimer = null;
   const button = (text, action, className) => {
     const el = node('button', text, className); el.type = 'button';
     el.addEventListener('click', action); return el;
   };
   function toast(message, ms = 4200) {
-    const el = node('div', message, 'toast'); toastBox.append(el);
-    setTimeout(() => el.remove(), ms);
+    clearTimeout(toastTimer);
+    const el = node('div', message, 'toast');
+    // Keep the polite status region, but replace superseded transient feedback.
+    // Rapid input must not stack obsolete notices over the tools and results.
+    toastBox.replaceChildren(el);
+    toastTimer = setTimeout(() => { el.remove(); toastTimer = null; }, ms);
   }
   function setDock(open) {
     dockOpen = !!open; dock.classList.toggle('open', dockOpen);

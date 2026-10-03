@@ -150,6 +150,8 @@ try {
       await page.locator('#simulationBanner').waitFor({ state: 'visible' });
       await waitText(page, '#telTime', '2026-12-14');
       await waitText(page, '#tonightBody', 'Moon');
+      assert.ok(await page.locator('#toasts .toast').count() <= 1, 'transient messages never stack over controls');
+      await page.waitForFunction(() => document.querySelector('#toasts')?.childElementCount === 0);
       await page.screenshot({ path: resolve(results, label + '-explore.png'), fullPage: true });
       await page.locator('#returnLive').click();
       await page.locator('#simulationBanner').waitFor({ state: 'hidden' });

@@ -17,7 +17,7 @@ All proprietary applications below are workflow references only: do not copy ass
 
 ## Calculation and rendering integration matrix
 
-Existing-repository mapping must be filled from the lead engineer's inventory before dependency changes. This research does not assert any implementation already exists.
+The source inventory and final integration mapping appear below. Candidate engine versions are research observations; exact runtime pins are recorded in THIRD-PARTY.md.
 
 | Project / primary source | Maintenance and licence evidence | Accuracy / validation | Browser, size and deployment | Decision and cost |
 |---|---|---|---|---|
@@ -49,3 +49,17 @@ Use a small immutable observation context (UTC instant, latitude north/east long
 - Stellarium Web Engine licence remains unresolved in this bounded research. Its attractive renderer is not a reason to import code with unclear terms.
 - Package sizes, main-thread cost and physical alignment were not measured in this research. Advertised catalogue counts and upstream precision targets are explicitly vendor/project statements.
 - No proprietary asset, product code, paid API or external account was added.
+
+## Reconciled implementation mapping
+
+| Workflow / existing code | Final integration / decision | Cost and validation evidence |
+|---|---|---|
+| Sky camera and manual modes: `sensors.js`, `astro.js`, `render.js`, `main.js` | Improved existing modules: camera-first entry, calibrated full basis, crop/FOV, cleanup, search/selection and manual fallback | Local AE 2.1.19; 26 camera cases, independent fixtures, physical alignment pending. `camera-methods.md` |
+| Catalogue and event tools: `sky.js`, `objects.js`, `events.js` | Improved shared date/location frames, cached sky, independent morning/evening visibility and precise twilight/transit searches | 1 Hz catalogue; measured CPU work and actual source/gzip bytes in `performance.md` |
+| Solar-system educational view | Added lazy `orbits.js` with shared AE heliocentric coordinates, AU scale, explicit marker-size exaggeration | No additional engine; finite-vector checks and browser Explore journey |
+| Satellites and aircraft: `satellites.js`, `planes.js` | Existing satellite.js 4.1.4 source pinned rather than untested major-version upgrade; stale elements suppressed. Aircraft explicitly opt-in | Optional CORS feed can fail; source/age/error disclosed. Snapshot is not live ISS data. No startup feed request |
+| Natal/transit/synastry/Vedic in separate `astrology-sim-ant` | Preserve specialized existing views. Improve shared chronology, Placidus/sect, unknown-time natal, aspect controls, sunrise weekday | No duplicate chart UI or incompatible engine. 72 independent house cusps and shared ephemeris cases; companion calculation methods |
+| Cultural calculators in companion Workbench | Add organized Calendars & Tools using existing conversion code, native named civil methods and local MIT Adhan 4.4.6 | 58 calendar checks; documented authority/date-line/polar limitations; loaded on calculator page |
+| Saved observation workflow and accessible controls | New local favorites/notes, native buttons/dialog/tabs, UTC simulation/Now, night palette, location and alignment settings | No new framework, server or paid API. Storage failure preserves calculations. Strict mobile/desktop browser journeys |
+
+The roadmap records priorities and acceptance per module. Swiss Ephemeris was used only as an independent reference executable during validation; its code/data is not part of either static application. Skyfield was evaluated as a reference candidate but not needed as an additional runtime or validator once independent published fixtures and Swiss house references were available.

@@ -34,3 +34,9 @@ Geometric projection remains sensor-based, with estimated diagonalFOV and manual
 ## First real browser gate
 
 PR #5 run `37095245776` passed Node checks, then failed the unchanged manual-keyboard journey. Its actual screenshot showed a blank canvas and telemetry when reduced motion was enabled. The controller used a zero sentinel and skipped every first frame; a null sentinel now guarantees an initial frame before applying the 32ms reduced-motion cap. A regression covers initial timestamp zero, ongoing throttling and resume. Full `npm test` passes with 10 integration cases. The browser harness records browser errors and failure state; real CI recheck is required.
+
+## Successful real browser verification
+
+[PR #5 run 37095687324](https://github.com/occult-kranti/skylens/actions/runs/37095687324) passed for candidate `e1791b916fd2cea56f76f5ba1e5e5e9ffce57b9a`. Real Chromium (Playwright 1.58.2, GitHub Ubuntu/Node22) completed both 390×844 and 1365×900 journeys and the synthetic MediaStream start/stop/restart/pagehide scenario. Browser diagnostics were empty, all local assets resolved under `/skylens/`, and no unrequested external calls occurred. All four screenshots were inspected by the UI reviewer and coordinator. This supersedes the earlier pending-browser checkpoint.
+
+Screenshot review found stacked transient messages obscuring the Explore controls during rapid actions. The final UI keeps one polite notification, cancelling the previous timeout; the browser assertion bounds notifications to one and captures Explore after dismissal. The final candidate must pass the same gate again before merge. Physical phone and screen-reader checks remain pending.
