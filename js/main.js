@@ -62,6 +62,12 @@ export function createSkyCache(compute) {
   }, clear() { key = null; } };
 }
 
+// A reduced-motion cap must still draw its first frame, including timestamp zero.
+// null means no frame has rendered yet (also after returning from a hidden tab).
+export function shouldRenderFrame(timestamp, previousFrame, reducedMotion) {
+  return previousFrame == null || !reducedMotion || timestamp - previousFrame >= 32;
+}
+
 export function createApplication() {
   const $ = id => document.getElementById(id), qp = new URLSearchParams(location.search);
   let storage = null;
@@ -81,7 +87,7 @@ export function createApplication() {
   let cameraSession = null, orientation = null, cameraToken = 0, cameraStarting = false;
   let animation = null, clockTimer = null, aircraft = null, satelliteController = null, satelliteReady = false;
   let engine = null, snapshot = { stars: [], renderStars: [], visibleCount: 0, constellations: [], dsos: [], renderDSOs: [], bodies: [], catalogue: [] };
-  let smoothed = null, previousFrame = 0, lastTelemetry = 0, lastMessage = '', lastEventsKey = '', query = '';
+  let smoothed = null, previousFrame = null, lastTelemetry = 0, lastMessage = '', lastEventsKey = '', query = '';
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const ui = createUI({ relocate, locate, startCamera: enableCamera, stopCamera: () => stopCamera('off'),
     setTime, search, toggleFavourite });
@@ -245,8 +251,8 @@ export function createApplication() {
   function frame(timestamp) {
     if (document.hidden) { animation = null; return; }
     animation = requestAnimationFrame(frame);
-    const delta = previousFrame ? timestamp - previousFrame : 16;
-    if (reducedMotion.matches && delta < 32) return;
+    if (!shouldRenderFrame(timestamp, previousFrame, reducedMotion.matches)) return;
+    const delta = previousFrame == null ? 16 : timestamp - previousFrame;
     previousFrame = timestamp;
     let basis, az = state.az, alt = state.alt;
     if (state.sensor && cameraSession) {
@@ -289,7 +295,7 @@ export function createApplication() {
   function suspend() {
     if (cameraSession || cameraStarting || orientation) stopCamera('paused');
     clearInterval(clockTimer); clockTimer = null;
-    cancelAnimationFrame(animation); animation = null; previousFrame = 0;
+    cancelAnimationFrame(animation); animation = null; previousFrame = null;
     aircraft?.stop(); aircraft = null; state.planes = [];
     satelliteController?.abort(); satelliteController = null;
   }

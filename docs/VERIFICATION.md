@@ -11,7 +11,7 @@ Final `npm test` passed in Linux/Node24.19.0:
 - 36 original catalogue/math/events/SGP4 checks.
 - Independent six-body Astrodienst ephemeris comparison, 2024newMoon reference, polar no-crossing, Venus morning visibility, heliocentric finite vectors and element-age suppression.
 - 26 camera cases: independent W3C matrices, rotation, FOV/crop, compass basis, front camera, north-wrap smoothing, label collisions and mocked lifecycle/permission failures.
-- 9 integration cases: strict UTC input, storage/input corruption, cache invalidation, all-sky search, shared coordinate frame/time, abortable aircraft and unknown-altitude handling.
+- 10 integration cases: strict UTC input, storage/input corruption, cache invalidation, all-sky search, shared coordinate frame/time, abortable aircraft and unknown-altitude handling.
 
 `node --check`, HTML ID/ARIA/label linkage checks, and `git diff --check` passed on edited files. No external string interpolation through innerHTML in the rewritten UI. Cross-repository links were corrected to the verified Skylens repository and existing natal page.
 
@@ -30,3 +30,7 @@ Physical iOS/Safari and Android/Chrome checks remain pending; use the precise ch
 See performance.md for reproducible conditions and raw rounds: catalogue workload866.687→42.695ms median over3600 synthetic frames,60 actual cached calculations (~95.1% less isolated catalogue work). Individual pass0.277→0.561ms due improved astronomy. This is not a phoneFPS, memory, battery or load-time claim. Vendor source is now local; raw source bytes increase while the core CDN dependency disappears.
 
 Geometric projection remains sensor-based, with estimated diagonalFOV and manual north/pitch correction. Proper motion, visual recognition, weather, complete satellite illumination/pass prediction and telescope control are not implemented. Current metadata/feed age is disclosed; no guaranteed sky visibility or exhaustive catalogue coverage. Existing broad astrology/Vedic tools are preserved in their owning app; calendar variants and limits are documented there.
+
+## First real browser gate
+
+PR #5 run `37095245776` passed Node checks, then failed the unchanged manual-keyboard journey. Its actual screenshot showed a blank canvas and telemetry when reduced motion was enabled. The controller used a zero sentinel and skipped every first frame; a null sentinel now guarantees an initial frame before applying the 32ms reduced-motion cap. A regression covers initial timestamp zero, ongoing throttling and resume. Full `npm test` passes with 10 integration cases. The browser harness records browser errors and failure state; real CI recheck is required.

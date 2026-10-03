@@ -43,3 +43,7 @@ The release adds local pinned vendor files, which increases tracked bytes but re
 ## Still requiring browser/device measurement
 
 Main-thread frame duration, label-layout cost on mobile, memory across camera restarts, camera crop/alignment, sensor lag, network waterfalls, initial paint and battery behavior need representative browsers/phones. Automated lifecycle tests prove resource ownership in their mocked conditions; they do not certify physical camera alignment or a real-device FPS budget.
+
+## Final static resource inventory
+
+2026-10-03, exact release candidate sources. Raw bytes and sum of individually gzip-compressed files (Python gzip.compress; not an HTTP waterfall): HTML+CSS28,563/8,947;11 applicationJS modules95,002/33,909;18 locally included engine modules501,346/135,614;4 catalogue JSON files95,250/36,146. Orbit is dynamically loaded on Explore; satellite source is local, and core startup performs no CDN/font fetch. These sizes do not establish first-paint or network performance. The baseline group gzip figures above combined files and therefore are not a directly comparable transfer metric.

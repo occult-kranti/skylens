@@ -36,6 +36,7 @@ const server = createServer(async (request, response) => {
 });
 let browser, failure;
 const completed = [];
+const browserDiagnostics = [];
 try {
   await new Promise((ok, no) => { server.once('error', no); server.listen(0, '127.0.0.1', ok); });
   const origin = 'http://127.0.0.1:' + server.address().port;
@@ -83,7 +84,11 @@ try {
     }, { camera });
     const page = await context.newPage();
     page.setDefaultTimeout(10000);
-    page.on('pageerror', e => errors.push(e.message));
+    page.on('pageerror', e => {
+      errors.push(e.message);
+      browserDiagnostics.push({ viewport, camera, error: e.message });
+      console.error('Browser error:', e.message);
+    });
     page.on('response', response => {
       if (response.status() >= 400) badResponses.push(response.status() + ' ' + response.url());
     });
@@ -161,6 +166,11 @@ try {
       check();
       completed.push(label + ': permission denial, manual keyboard, location fallback/input, search/select/save, UTC simulation, persistence, Pages base path, no external requests');
     } catch (error) {
+      browserDiagnostics.push({ label, state: await page.evaluate(() => ({
+        focus: document.activeElement?.id, aim: document.querySelector('#telAim')?.textContent,
+        camera: document.querySelector('#cameraStatus')?.textContent,
+        reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      })).catch(() => null) });
       await page.screenshot({ path: resolve(results, label + '-failure.png'), fullPage: true }).catch(() => {});
       throw error;
     } finally { await context.close(); }
@@ -191,7 +201,7 @@ try {
   await browser?.close();
   if (server.listening) await new Promise(ok => server.close(ok));
   await writeFile(resolve(results, 'browser-results.json'), JSON.stringify({
-    timestamp: new Date().toISOString(), completed, passed: !failure,
+    timestamp: new Date().toISOString(), completed, passed: !failure, browserDiagnostics,
     failure: failure ? String(failure.stack || failure) : null,
     physicalDeviceAlignment: 'not tested; requires documented phone checklist',
   }, null, 2));

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as AE from '../vendor/astronomy.js';
-import { parseSimulationTime, normalizePreferences, readPreferences, validLocation, searchCatalogue, createSkyCache } from '../js/main.js';
+import { parseSimulationTime, normalizePreferences, readPreferences, validLocation, searchCatalogue, createSkyCache, shouldRenderFrame } from '../js/main.js';
 import { engineReady, loadStars, visibleStars, horizontalProjector, computeBodies } from '../js/sky.js';
 import { loadConstellations, loadDSOs, constellationFrame, dsoFrame } from '../js/objects.js';
 import { startPlanes } from '../js/planes.js';
@@ -52,6 +52,19 @@ test('cache separates sensor frames from one-second sky recomputation and invali
   cache.get(new Date(t + 1000), { ...loc, lon: 21 }, settings); assert.equal(calls, 3);
   cache.get(new Date(t + 1000), loc, { ...settings, refraction: true }); assert.equal(calls, 4);
   cache.get(new Date(t + 1000), loc, settings, true); assert.equal(calls, 5);
+});
+
+test('reduced-motion render loop draws immediately, keeps advancing and resumes after suspension', () => {
+  let previous = null;
+  const drawn = [];
+  for (const timestamp of [0, 16, 32, 48, 64, 80, 96]) {
+    if (!shouldRenderFrame(timestamp, previous, true)) continue;
+    previous = timestamp; drawn.push(timestamp);
+  }
+  assert.deepEqual(drawn, [0, 32, 64, 96], 'initial timestamp zero must not starve every later frame');
+  assert.equal(shouldRenderFrame(110, previous, false), true, 'normal-motion view is not capped');
+  previous = null;
+  assert.equal(shouldRenderFrame(5000, previous, true), true, 'resume renders without waiting for prior-frame state');
 });
 
 test('search covers below-horizon stars and all 110 Messier objects with stable IDs', () => {
