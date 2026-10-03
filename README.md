@@ -1,71 +1,37 @@
 # SkyLens
 
-**Point your phone at the sky. Name every star, satellite and plane.**
+A camera-first, sensor-based sky overlay with a manual sky explorer. Camera frames stay on the device. Labels are calculated from your location, time and phone orientation; this is **not image recognition**.
 
-A zero-build, fully client-side, open-source AR sky tracker that runs in the browser — no install, no account, no backend. Camera + compass + gyroscope overlay of stars (HYG catalog), constellations, Messier deep-sky objects, Sun/Moon/planets, satellites (live CelesTrak TLEs, SGP4) and aircraft (live ADS-B).
+## Use the app
 
-**Features:** AR camera overlay with tap-to-identify · 1,023 stars + 89 constellation figures + all 110 Messier objects · planet rise/set/magnitude/visibility, moon phases, sun & astro-darkness times, meteor showers (Tonight tab) · live satellites & aircraft with a "Guide me ▸" chevron that points you at any object · manual mode (drag/arrow keys) for desktop · night-vision red mode · layer chips for one-tap filtering · in-browser diagnostics page (`test.html?auto=1`) + node test suite (36 checks).
+Enable camera, choose your location, and point toward the sky. Use **Align** to correct heading and pitch and estimate your camera’s diagonal field of view. Phone compasses are imperfect: magnetic north, local interference and browser sensor conventions affect alignment. Manual drag, keyboard arrows and object search remain available without hardware permissions.
 
-## Run it
+* **Sky:** named-object search, planets, 1,023 catalogue stars, 89 constellation figures, 110 Messier objects, filters and directional guidance.
+* **Explore:** selected UTC time, return to now, rise/set/transit, Moon phases, astronomical darkness, annual meteor reference dates and a heliocentric solar-system diagram with linear distance scale.
+* **Saved:** favorites and observation notes stored in this browser.
+* **Settings:** saved location, night palette, magnitude, alignment and optional feeds. The initial New York demo location is explicitly labeled; GPS is requested only when chosen.
+* **Charts & calendars:** connected links to the separate [Astrology Workbench](https://occult-kranti.github.io/astrology-sim-ant/), preserving its existing natal, transit, synastry, Vedic and historical tools.
 
-Any static file server works (ES modules need HTTP, not `file://`):
+Aircraft data is off until enabled and sends rounded observer coordinates to AvioADSB. Satellite data comes from CelesTrak or a timestamped cached/bundled snapshot. Elements more than seven days from the selected instant are omitted; even fresh elements are estimates. Neither feed is for navigation.
 
-```bash
+## Run and test
+
+Vanilla ES modules, Canvas 2D and static JSON; no application build or npm installation required. Pinned local MIT engines are included.
+
+```sh
 python3 -m http.server 8000
-# → http://localhost:8000
+npm test
 ```
 
-Open on a phone over HTTPS for full AR (camera + motion sensors require a secure context). On desktop or without sensors, **Manual mode** gives the full sky — drag to look around, arrow keys work too.
+Open `http://localhost:8000/`. Camera/motion need HTTPS or localhost and a supported browser. `?manual=1&lat=51.5&lon=0` opens a manual location; `?dock=tonight` opens Explore. Relative assets work at the GitHub Pages project path. `test.html?auto=1` runs browser diagnostics.
 
-## Deploy (GitHub Pages)
+Browser release checks: install pinned Playwright 1.58.2 as a development tool, run `npx playwright install chromium`, then `node tests/browser.mjs`. CI runs Node and browser checks before Pages deployment; see `.github/workflows/pages.yml`. A successful local calculation test is not evidence of a live deployment or physical alignment.
 
-**Option A — one click, no CI:** Settings → Pages → Source: **"Deploy from a branch"** → `main` / `(root)`. The repo is self-contained (`data/*.json` committed), so the site goes live immediately at `https://<you>.github.io/skylens/`.
+## Methods and project evidence
 
-**Option B — Actions (fresh TLEs baked into every deploy):** copy `docs/github-workflow-pages.yml` to `.github/workflows/pages.yml`, then Settings → Pages → Source: **"GitHub Actions"**. The workflow runs `tools/build_data.py` on each push, regenerating the star catalog and TLE snapshot from upstream.
+* [Living roadmap](docs/2026-10-roadmap.md) and [product brief](docs/product-brief.md)
+* [Repository baseline](docs/repository-baseline.md), [product research](docs/product-research.md), [calendar research](docs/calendar-research.md)
+* [Camera methods and phone checklist](docs/camera-methods.md), [calculation methods](docs/CALCULATIONS.md)
+* [Licenses and attribution](docs/THIRD-PARTY.md), [performance](docs/performance.md), [verification](docs/VERIFICATION.md)
 
-## Vendor libraries
-
-Large third-party JS is **not committed** — the app loads it local-first with a pinned-CDN fallback:
-
-| File | Package | License |
-|---|---|---|
-| `vendor/astronomy.js` | astronomy-engine 2.1.19 | MIT |
-| `vendor/satellite.min.js` | satellite.js 4.1.4 | MIT |
-
-For fully-offline local dev: `npm pack astronomy-engine@2.1.19 satellite.js@4.1.4`, then copy `esm/astronomy.js` → `vendor/astronomy.js` and `dist/satellite.min.js` → `vendor/satellite.min.js` (the ESM build `dist/satellite.es.js` → `vendor/satellite.esm.js` is needed for the node test suite).
-
-## Data files
-
-`data/*.json` are committed (so branch-based Pages "just works") and can be regenerated any time with `python3 tools/build_data.py` — the optional Actions workflow (Option B) does this on every deploy for fresh TLEs. Constellation/DSO data comes from d3-celestial (see below).
-
-## Data sources & licenses
-
-| Data | Source | License |
-|---|---|---|
-| Star positions (1,023 stars ≤ mag 4.6, J2000) | [HYG Database v4.1](https://github.com/astronexus/HYG-Database) | permissive |
-| Constellation figures + Messier objects | [d3-celestial](https://github.com/ofrohn/d3-celestial) data | BSD, © Olaf Frohn |
-| Satellite TLEs (live) | [CelesTrak](https://celestrak.org) `gp.php` | public data |
-| Satellite TLEs (offline snapshot) | bundled `data/tle-snapshot.json` | public data |
-| Aircraft | [AvioADSB](https://avioadsb.org) | **CC BY 4.0** — attribution shown in-app |
-| Planets / Sun / Moon / events | astronomy-engine | MIT |
-| SGP4 propagation | satellite.js | MIT |
-| Fonts | Inter, Fira Code | OFL |
-
-ADS-B data is a best-effort community feed — **never for navigation or safety-critical use**.
-
-## Testing
-
-```bash
-node tests/node/run.mjs        # 36 checks: math vs astronomy-engine oracle, SGP4, events, edge cases, stress
-# browser: open /test.html?auto=1  → functional + edge + stress report (title = PASS/FAIL)
-```
-
-Edge/stress matrix: see `SkyLens-Roadmap.md` §9 (sensor denial, iOS permission flow, poles/dateline, stale/malformed TLEs, API backoff, 3k-sat propagation, 10k-star render).
-
-## URL parameters
-
-`?manual=1` skip AR prompt · `?nointro=1` skip straight in · `?lat=…&lon=…` override location · `?fov=75` field of view · `?dock=tonight` open a dock panel
-
-## Stack
-
-Vanilla ES modules + Canvas 2D. No framework, no bundler. Design system: full-bleed camera, corner telemetry, layer chips, glass inspector dock, red-shifted night-vision mode. See `SkyLens-Roadmap.md` for the full product/technical plan (advisory review, phases P0–P6, perf budgets).
+Catalogue star coordinates are J2000 rotated with precession/nutation; proper-motion propagation is not included. Astronomy Engine 2.1.19 supplies planetary positions and events; satellite.js 4.1.4 supplies SGP4. The interactive time range is 1900–2100, not a blanket precision guarantee for every object or device. Physical iOS/Android alignment and screen-reader testing remain separate release checks.

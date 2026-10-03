@@ -161,7 +161,8 @@ for (const lat of [20, 51.5, -30]) {
   const EV = await import('../../js/events.js');
   const d2 = new Date('2026-10-03T12:00:00Z');
   const sun = EV.sunEvents(AE, d2, 51.5, 0);
-  T('sunEvents: London Oct sunrise/sunset sane', sun.sunrise >= '05:30' && sun.sunrise <= '06:45' && sun.sunset >= '17:15' && sun.sunset <= '19:00', JSON.stringify(sun));
+  const riseClock = sun.sunrise?.slice(6, 11), setClock = sun.sunset?.slice(6, 11);
+  T('sunEvents: London Oct sunrise/sunset sane', riseClock >= '05:30' && riseClock <= '06:45' && setClock >= '17:15' && setClock <= '19:00' && sun.sunrise.endsWith('UTC'), JSON.stringify(sun));
   const moon = EV.moonEvents(AE, d2);
   T('moonEvents: phase + 4 ordered quarters', !!moon.phaseName && moon.quarters.length === 4 && moon.quarters.every((q, i, a) => i === 0 || a[i - 1].date < q.date),
     `${moon.phaseName} ${(moon.illum * 100).toFixed(0)}% → ${moon.quarters.map((q) => q.name.split(' ')[0]).join(',')}`);

@@ -27,17 +27,8 @@
 <canvas id="bench" width="800" height="450"></canvas>
 
 <script>
-window.__satReady = new Promise((resolve) => {
-  const inject = (src, ok, fail) => {
-    const s = document.createElement('script');
-    s.src = src; s.onload = () => resolve(ok); s.onerror = fail;
-    document.head.appendChild(s);
-  };
-  inject('vendor/satellite.min.js', 'local', () =>
-    inject('https://cdn.jsdelivr.net/npm/satellite.js@4.1.4/dist/satellite.min.js', 'cdn', () => resolve('none')));
-});
-window.__aeReady = import('./vendor/astronomy.js').catch(() =>
-  import('https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/esm/astronomy.js'));
+window.__satReady = import('./vendor/satellite.esm.js').then(lib => { window.satellite = lib; return 'local'; }).catch(() => 'none');
+window.__aeReady = import('./vendor/astronomy.js');
 window.__aeReady.catch(() => {});
 </script>
 <script type="module">

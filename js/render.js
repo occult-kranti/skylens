@@ -23,6 +23,22 @@ export const PALETTES = {
   },
 };
 
+// Deterministic priority order prevents catalogue order from hiding bright objects.
+// Dimensions are measured from the real canvas font; hidden labels remain tappable.
+export function layoutLabels(candidates, width, height, limit = 45) {
+  const placed = [];
+  const ordered = [...candidates].sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key));
+  for (const item of ordered) {
+    if (placed.length >= limit) break;
+    const left = item.align === 'left' ? item.x : item.x - item.width / 2;
+    const rect = { left: left - 4, right: left + item.width + 4, top: item.y - item.height - 3, bottom: item.y + 4 };
+    if (rect.left < 4 || rect.right > width - 4 || rect.top < 4 || rect.bottom > height - 4) continue;
+    if (placed.some((p) => rect.left < p.rect.right && rect.right > p.rect.left && rect.top < p.rect.bottom && rect.bottom > p.rect.top)) continue;
+    placed.push({ ...item, rect });
+  }
+  return placed;
+}
+
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   let w = 0, h = 0;
@@ -51,12 +67,16 @@ export function createRenderer(canvas) {
     drawn = [];
     ctx.clearRect(0, 0, w, h);
     const { basis, tanH, tanV } = scene;
-    const proj = (alt, az) => projectVec(vecFromAltAz(alt, az), basis, tanH, tanV, w, h);
-    const labelCells = new Set();
-    const labelOK = (x, y) => {
-      const k = `${Math.round(x / 96)},${Math.round(y / 64)}`;
-      if (labelCells.has(k)) return false;
-      labelCells.add(k); return true;
+    const proj = (alt, az) => scene.horizonOnly && alt < 0 ? null
+      : projectVec(vecFromAltAz(alt, az), basis, tanH, tanV, w, h);
+    const labels = [];
+    const label = (str, x, y, color, size = 11, priority = 10, align = 'center') => {
+      ctx.font = `500 ${size}px "Fira Code", ui-monospace, monospace`;
+      const key = str;
+      while (str.length > 4 && ctx.measureText(str).width > w - 24) str = str.slice(0, -2).trimEnd() + '…';
+      const width = ctx.measureText(str).width;
+      if (priority >= 100) { x = clamp(x, width / 2 + 10, w - width / 2 - 10); y = clamp(y, size + 10, h - 10); }
+      labels.push({ str, key, x, y, color, size, priority, align, width, height: size });
     };
 
     /* ---- alt-az grid ---- */
@@ -84,11 +104,11 @@ export function createRenderer(canvas) {
       }
       for (let az = 0; az < 360; az += 45) {
         const p = proj(1.5, az);
-        if (p) text(az % 90 === 0 ? 'NESW'[az / 90] : String(az), p.x, p.y - 4, PAL.gridText, az % 90 === 0 ? 13 : 10);
+        if (p) label(az % 90 === 0 ? 'NESW'[az / 90] : String(az), p.x, p.y - 4, PAL.gridText, az % 90 === 0 ? 13 : 10, 5);
       }
       for (let alt = 15; alt <= 75; alt += 15) {
         const p = proj(alt, scene.centerAz);
-        if (p) text(`${alt}°`, p.x + 14, p.y - 3, PAL.gridText, 9, 'left');
+        if (p) label(`${alt}°`, p.x + 14, p.y - 3, PAL.gridText, 9, 4, 'left');
       }
     }
 
@@ -107,7 +127,7 @@ export function createRenderer(canvas) {
         }
         if (scene.layers.labels && c.label) {
           const p = proj(c.label.alt, c.label.az);
-          if (p && labelOK(p.x, p.y)) text(c.name.toUpperCase(), p.x, p.y, PAL.constLabel, 9);
+          if (p) label(c.name.toUpperCase(), p.x, p.y, PAL.constLabel, 9, 6);
         }
       }
     }
@@ -126,7 +146,7 @@ export function createRenderer(canvas) {
           if (d.type === 'globular cluster') { ctx.beginPath(); ctx.moveTo(p.x - rr, p.y); ctx.lineTo(p.x + rr, p.y); ctx.moveTo(p.x, p.y - rr); ctx.lineTo(p.x, p.y + rr); ctx.stroke(); }
         }
         const lbl = d.altName ? `${d.name} ${d.altName}` : d.name;
-        if (scene.layers.labels && (d.mag ?? 9) <= 6.5 && labelOK(p.x, p.y)) text(lbl, p.x, p.y - rr - 3, PAL.dso, 9);
+        if (scene.layers.labels && (d.mag ?? 9) <= 6.5) label(lbl, p.x, p.y - rr - 3, PAL.dso, 9, 12 - (d.mag ?? 9));
         drawn.push({ x: p.x, y: p.y, r: Math.max(14, rr + 6), kind: 'dso', data: d });
       }
     }
@@ -141,14 +161,14 @@ export function createRenderer(canvas) {
         ctx.fillStyle = PAL.star(a);
         ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.2832); ctx.fill();
         drawn.push({ x: p.x, y: p.y, r: Math.max(12, r + 6), kind: 'star', data: s });
-        if (scene.layers.labels && s.name && s.mag <= 1.6 && labelOK(p.x, p.y)) {
-          text(s.name, p.x, p.y - 7, PAL.starLabel, 10);
+        if (scene.layers.labels && s.name && s.mag <= 1.6) {
+          label(s.name, p.x, p.y - 7, PAL.starLabel, 10, 30 - s.mag);
         }
       }
     }
 
     /* ---- Sun / Moon / planets ---- */
-    for (const b of scene.bodies) {
+    for (const b of scene.layers.bodies === false ? [] : scene.bodies) {
       const p = proj(b.alt, b.az);
       if (!p) continue;
       if (b.kind === 'sun') {
@@ -161,7 +181,7 @@ export function createRenderer(canvas) {
         ctx.fillStyle = PAL.planet; ctx.beginPath(); ctx.arc(p.x, p.y, 3.6, 0, 6.2832); ctx.fill();
       }
       const lbl = b.kind === 'moon' && b.phase != null ? `${b.name} ${(b.phase * 100) | 0}%` : b.name;
-      if (scene.layers.labels && labelOK(p.x, p.y)) text(lbl, p.x, p.y - 10, b.kind === 'planet' ? PAL.planet : PAL.sun, 11);
+      if (scene.layers.labels) label(lbl, p.x, p.y - 10, b.kind === 'planet' ? PAL.planet : PAL.sun, 11, 50);
       drawn.push({ x: p.x, y: p.y, r: 16, kind: b.kind, data: b });
     }
 
@@ -174,7 +194,7 @@ export function createRenderer(canvas) {
         ctx.beginPath();
         ctx.moveTo(p.x, p.y - 4.5); ctx.lineTo(p.x + 4, p.y + 3); ctx.lineTo(p.x - 4, p.y + 3);
         ctx.closePath(); ctx.fill();
-        if (scene.layers.labels && labelOK(p.x, p.y)) text(s.name, p.x, p.y - 8, PAL.sat, 10);
+        if (scene.layers.labels) label(s.name, p.x, p.y - 8, PAL.sat, 10, 15);
         drawn.push({ x: p.x, y: p.y, r: 14, kind: 'satellite', data: s });
       }
     }
@@ -189,7 +209,7 @@ export function createRenderer(canvas) {
         ctx.moveTo(p.x, p.y - 5); ctx.lineTo(p.x + 5, p.y); ctx.lineTo(p.x, p.y + 5); ctx.lineTo(p.x - 5, p.y);
         ctx.closePath(); ctx.stroke();
         const altTxt = pl.altFt != null ? ` ${Math.round(pl.altFt / 100) * 100 >= 1000 ? (Math.round(pl.altFt / 100) / 10).toFixed(1) + 'k' : pl.altFt}ft` : '';
-        if (scene.layers.labels && labelOK(p.x, p.y)) text(pl.flight + altTxt, p.x, p.y - 8, PAL.plane, 10);
+        if (scene.layers.labels) label(pl.flight + altTxt, p.x, p.y - 8, PAL.plane, 10, 15);
         drawn.push({ x: p.x, y: p.y, r: 14, kind: 'plane', data: pl });
       }
     }
@@ -198,26 +218,32 @@ export function createRenderer(canvas) {
     if (scene.highlight) {
       const t = scene.highlight;
       const p = proj(t.alt, t.az);
-      if (p) {
-        const pulse = 12 + 3 * Math.sin(performance.now() / 220);
+      if (p && p.x >= 16 && p.x <= w - 16 && p.y >= 16 && p.y <= h - 16) {
+        const pulse = scene.reducedMotion ? 13 : 12 + 3 * Math.sin(performance.now() / 220);
         ctx.strokeStyle = PAL.highlight; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
         ctx.beginPath(); ctx.arc(p.x, p.y, pulse, 0, 6.2832); ctx.stroke();
         ctx.setLineDash([]);
-        text(t.label, p.x, p.y - pulse - 6, PAL.highlight, 11);
+        label(t.label, p.x, p.y - pulse - 6, PAL.highlight, 11, 100);
       } else if (scene.centerAz != null) {
         // off-screen: chevron at the screen edge pointing toward the target
-        const dAz = ((t.az - scene.centerAz + 540) % 360) - 180;
-        const dAlt = t.alt - (scene.centerAlt ?? 0);
-        const ang = Math.atan2(-dAlt, dAz); // screen: right = 0, up = −90°
+        const target = vecFromAltAz(t.alt, t.az);
+        const dot = (a, b) => a.reduce((sum, v, i) => sum + v * b[i], 0);
+        const dx = dot(target, basis.right), dy = -dot(target, basis.up);
+        const angle = Math.acos(clamp(dot(target, basis.fwd), -1, 1)) * 180 / Math.PI;
+        const ang = Math.hypot(dx, dy) < 1e-6 ? Math.PI : Math.atan2(dy, dx);
         const ex = clamp(w / 2 + Math.cos(ang) * w, 34, w - 34);
         const ey = clamp(h / 2 + Math.sin(ang) * h, 34, h - 34);
         ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang);
         ctx.strokeStyle = PAL.highlight; ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.moveTo(9, -7); ctx.lineTo(0, 0); ctx.lineTo(9, 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(2, 0); ctx.lineTo(-7, 7); ctx.stroke();
         ctx.restore();
-        text(`${Math.abs(dAz).toFixed(0)}° ${dAz > 0 ? 'R' : 'L'} · ${Math.abs(dAlt).toFixed(0)}° ${dAlt > 0 ? 'up' : 'down'}`, ex, ey + 20, PAL.highlight, 10);
-        text(t.label, ex, ey - 16, PAL.highlight, 10);
+        label(`${angle.toFixed(0)}° away${t.alt < 0 ? ' · below horizon' : ''}`, ex, ey + 20, PAL.highlight, 10, 100);
+        label(t.label, ex, ey - 16, PAL.highlight, 10, 100);
       }
+    }
+
+    for (const item of layoutLabels(labels, w, h)) {
+      text(item.str, item.x, item.y, item.color, item.size, item.align);
     }
 
     /* ---- crosshair ---- */
@@ -229,6 +255,8 @@ export function createRenderer(canvas) {
   }
 
   function hitTest(x, y) {
+    const rect = canvas.getBoundingClientRect();
+    x -= rect.left; y -= rect.top;
     let best = null, bestD = 26;
     for (const it of drawn) {
       const d = Math.hypot(it.x - x, it.y - y) - it.r + 12;
@@ -237,5 +265,5 @@ export function createRenderer(canvas) {
     return best;
   }
 
-  return { draw, hitTest, resize, get width() { return w; }, get height() { return h; } };
+  return { draw, hitTest, resize, dispose() { window.removeEventListener('resize', resize); drawn = []; }, get width() { return w; }, get height() { return h; } };
 }

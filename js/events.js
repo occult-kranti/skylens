@@ -2,7 +2,7 @@
 // All functions take the astronomy-engine namespace (AE) explicitly → node-testable.
 import { D2R, radecToAltAz, norm360 } from './astro.js';
 
-const fmtTime = (t) => t ? `${String(t.getUTCHours()).padStart(2, '0')}:${String(t.getUTCMinutes()).padStart(2, '0')}` : null;
+const fmtTime = (t) => t ? t.toISOString().slice(5, 16).replace('T', ' ') + ' UTC' : null;
 
 /* ---------- Sun ---------- */
 
@@ -16,18 +16,14 @@ export function sunEvents(AE, date, latDeg, lonDeg) {
     const s = AE.SearchRiseSet('Sun', obs, -1, t0, 1);
     sunrise = r && r.date; sunset = s && s.date;
   } catch { /* circumpolar */ }
-  // astro-night scan: next 26 h in 20-min steps
-  let darkStart = null, darkEnd = null, wasDark = false;
-  for (let m = 0; m <= 26 * 60; m += 20) {
-    const t = new Date(date.getTime() + m * 60000);
-    const eq = AE.Equator('Sun', AE.MakeTime(t), obs, true, true);
-    const alt = AE.Horizon(AE.MakeTime(t), obs, eq.ra, eq.dec, null).altitude;
-    const dark = alt <= -18;
-    if (dark && !wasDark && !darkStart) darkStart = t;
-    if (!dark && wasDark) { darkEnd = t; break; }
-    wasDark = dark;
-  }
-  return { sunrise: fmtTime(sunrise), sunset: fmtTime(sunset), darkStart: fmtTime(darkStart), darkEnd: fmtTime(darkEnd) };
+  // Geometric solar centre crossing −18°, not a 20-minute sampling approximation.
+  const eq = AE.Equator('Sun', t0, obs, true, true);
+  const darkNow = AE.Horizon(t0, obs, eq.ra, eq.dec, null).altitude <= -18;
+  const dusk = AE.SearchAltitude('Sun', obs, -1, t0, 2, -18);
+  const start = darkNow ? t0 : dusk;
+  const dawn = start ? AE.SearchAltitude('Sun', obs, +1, start, 2, -18) : null;
+  return { sunrise: fmtTime(sunrise), sunset: fmtTime(sunset), darkStart: darkNow ? 'Already dark' : fmtTime(dusk?.date), darkEnd: fmtTime(dawn?.date), darkNow,
+    note: 'Rise/set: next 24 h; astronomical darkness: Sun below −18°, next 48 h. No crossing can occur at high latitude.' };
 }
 
 /* ---------- Moon ---------- */
@@ -72,12 +68,12 @@ export function planetEvents(AE, date, latDeg, lonDeg) {
       const rise = AE.SearchRiseSet(name, obs, +1, t0, 1);
       const set = AE.SearchRiseSet(name, obs, -1, t0, 1);
       // ecliptic_separation > 0 → east of Sun → visible after sunset (evening)
-      const vis = el && typeof el.ecliptic_separation === 'number'
-        ? (el.ecliptic_separation > 0 ? 'evening' : 'morning') : null;
+      const vis = el?.visibility || null;
+      const transit = AE.SearchHourAngle(name, obs, 0, t0, +1);
       out.push({
         name, alt: h.altitude, az: h.azimuth, mag: il.mag,
         elong: el ? el.elongation : null, visibility: vis,
-        rise: fmtTime(rise && rise.date), set: fmtTime(set && set.date),
+        rise: fmtTime(rise && rise.date), set: fmtTime(set && set.date), transit: fmtTime(transit?.time.date),
         up: h.altitude > 0,
       });
     } catch { /* skip body */ }

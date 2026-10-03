@@ -1,4 +1,3 @@
-# Reference copy of .github/workflows/pages.yml; keep the two in sync.
 name: Verify and deploy SkyLens
 
 on:

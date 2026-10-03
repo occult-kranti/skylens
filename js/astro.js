@@ -90,6 +90,54 @@ export function attitudeFromSensors(alphaDeg, betaDeg, gammaDeg, orientDeg) {
   return { fwd, right, up, az, alt };
 }
 
+// Compass readings are magnetic/implementation-defined, not guaranteed true north.
+// WebKit's independent compass heading anchors its otherwise relative alpha.
+// Calibration corrects all basis vectors, so projection, telemetry and guidance agree.
+export function correctedAttitude(sample, { headingOffset = 0, pitchOffset = 0, frontCamera = false } = {}) {
+  const alpha = Number.isFinite(sample.compassHeading) && sample.compassHeading >= 0
+    ? norm360(360 - sample.compassHeading) : sample.alpha;
+  const basis = attitudeFromSensors(alpha, sample.beta, sample.gamma, sample.orient);
+  if (frontCamera) {
+    basis.fwd = basis.fwd.map((v) => -v);
+    basis.right = basis.right.map((v) => -v);
+  }
+  const yaw = qAxisAngle([0, 1, 0], -headingOffset * D2R);
+  for (const key of ['fwd', 'right', 'up']) basis[key] = qRot(yaw, basis[key]);
+  const pitch = qAxisAngle(basis.right, pitchOffset * D2R);
+  basis.fwd = qRot(pitch, basis.fwd);
+  basis.up = qRot(pitch, basis.up);
+  return { ...basis, ...altAzFromVec(basis.fwd) };
+}
+
+// A short low-pass filter on vectors avoids heading wrap and Euler singularities.
+// Re-orthogonalizing preserves a proper camera frame. A large discontinuity snaps
+// to the newest frame rather than inventing a turn direction or lagging a restart.
+export function smoothAttitude(previous, target, deltaMs, timeConstantMs = 70) {
+  if (!previous || deltaMs <= 0 || deltaMs > 500 || vdot(previous.fwd, target.fwd) < -0.5
+    || vdot(previous.up, target.up) < -0.5) return target;
+  const weight = 1 - Math.exp(-deltaMs / Math.max(1, timeConstantMs));
+  const blend = (a, b) => a.map((v, i) => v + (b[i] - v) * weight);
+  const unit = (v) => { const n = Math.hypot(...v); return n > 1e-8 ? v.map((x) => x / n) : null; };
+  const fwd = unit(blend(previous.fwd, target.fwd));
+  if (!fwd) return target;
+  const right = unit(cross(fwd, blend(previous.up, target.up)));
+  if (!right) return target;
+  const up = cross(right, fwd);
+  return { fwd, right, up, ...altAzFromVec(fwd) };
+}
+
+// Estimated/calibrated lens diagonal FOV, square pixels, centered object-fit:cover.
+// Video dimensions are read after playback; they may swap on device rotation.
+// This models crop but not lens distortion, stabilization or multiple lens changes.
+export function cameraFov(diagonalFov, width, height, videoWidth, videoHeight) {
+  const w = Math.max(1, width), h = Math.max(1, height);
+  const sw = videoWidth > 0 ? videoWidth : w, sh = videoHeight > 0 ? videoHeight : h;
+  const diagonal = Number.isFinite(diagonalFov) ? clamp(diagonalFov, 20, 140) : 60;
+  const focal = Math.hypot(sw, sh) / (2 * Math.tan(diagonal * D2R / 2));
+  const coverScale = Math.max(w / sw, h / sh);
+  return { tanH: w / (2 * focal * coverScale), tanV: h / (2 * focal * coverScale) };
+}
+
 /* ------------- gnomonic projection to screen pixels ------------- */
 
 function cross(a, b) {
