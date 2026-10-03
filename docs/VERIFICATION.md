@@ -21,7 +21,7 @@ The independent camera architecture review is in camera-methods.md. The separate
 
 Local HTTP server failed `listen EPERM127.0.0.1`; Chromium failed crashpad `setsockopt: Operation not permitted`. Consequently there are **no local screenshots or completed local browser journeys**. Strict Playwright journeys are committed in tests/browser.mjs and gated in the proposed Pages workflow. They exercise390px and1365px views, permission denial, synthetic camera start/stop/restart/pagehide, keyboard/manual exploration, location failure/manual input, search/save/notes, time simulation, persisted settings, project-prefix routing and absence of unrequested external calls.
 
-CI browser results, screenshot inspection, deployment SHA and live URL verification are pending publication of this candidate. Do not claim deployed from these local tests. A release.json containing the tested commit is produced only by CI's artifact step. Workflow deploys only main after tests; it verifies that release.json at the HTTPS site matches the tested commit.
+Real CI browser results and screenshot inspection passed, as recorded below. CI produces a release.json containing its tested commit; the main-only deployment job checks that the HTTPS site serves that exact identity. See the release record below for the actual deployment outcome.
 
 Physical iOS/Safari and Android/Chrome checks remain pending; use the precise checklist in camera-methods.md. Mocks do not establish optical FOV, compass north, sensor lag, camera rotations, memory behavior or alignment. Screen-reader testing is also pending.
 
@@ -39,4 +39,20 @@ PR #5 run `37095245776` passed Node checks, then failed the unchanged manual-key
 
 [PR #5 run 37095687324](https://github.com/occult-kranti/skylens/actions/runs/37095687324) passed for candidate `e1791b916fd2cea56f76f5ba1e5e5e9ffce57b9a`. Real Chromium (Playwright 1.58.2, GitHub Ubuntu/Node22) completed both 390×844 and 1365×900 journeys and the synthetic MediaStream start/stop/restart/pagehide scenario. Browser diagnostics were empty, all local assets resolved under `/skylens/`, and no unrequested external calls occurred. All four screenshots were inspected by the UI reviewer and coordinator. This supersedes the earlier pending-browser checkpoint.
 
-Screenshot review found stacked transient messages obscuring the Explore controls during rapid actions. The final UI keeps one polite notification, cancelling the previous timeout; the browser assertion bounds notifications to one and captures Explore after dismissal. The final candidate must pass the same gate again before merge. Physical phone and screen-reader checks remain pending.
+Screenshot review found stacked transient messages obscuring the Explore controls during rapid actions. The final UI keeps one polite notification, cancelling the previous timeout; the browser assertion bounds notifications to one and captures Explore after dismissal. The final candidate passed the same gate again before merge. Physical phone and screen-reader checks remain pending.
+
+## Final integration and review
+
+[PR #5](https://github.com/occult-kranti/skylens/pull/5) merged tested head `06f51fc2da0cf9088bb0883d1754d52f7ee420de` as `5b4cdd9cddb0ffb76e2d77de26d4ffea2e2bfc2a`. [Final PR run 37095900450](https://github.com/occult-kranti/skylens/actions/runs/37095900450) passed all Node and browser gates. Its four screenshots were downloaded and inspected; Explore controls/results remain unobscured after the notification repair. Browser diagnostics are empty. All three bounded review passes are complete, including repairs and independent rechecks.
+
+## Deployment outcome and required administrator step
+
+[Main run 37096023612](https://github.com/occult-kranti/skylens/actions/runs/37096023612), for merged commit `5b4cdd9cddb0ffb76e2d77de26d4ffea2e2bfc2a`, passed its complete verification job. Deployment failed at `actions/configure-pages@v5`: `Create Pages site failed. Error: Resource not accessible by integration`. Pages has not yet been enabled for this repository; the workflow token has Pages write access but cannot perform first-time administration. The available GitHub connector exposes no Pages configuration mutation. A shell network permission attempt did not complete; no credential was exposed or restriction bypassed.
+
+**SkyLens is not deployed at this checkpoint.** Its target URL is https://occult-kranti.github.io/skylens/ and returned not found during live inspection. The administrator must open https://github.com/occult-kranti/skylens/settings/pages and choose **GitHub Actions** as the source. Then rerun the failed deploy job or the main workflow. Success requires its live `release.json` to match the run's main SHA. No code change, paid service or token sharing is required.
+
+The companion Workbench deployed successfully: https://occult-kranti.github.io/astrology-sim-ant/ . Its live release metadata independently fetched on 2026-10-03 contains merged SHA `0f7a7a3b1d2d3938d4424fecc47211b192217f8f`, and the new calendar page serves the expected method descriptions.
+
+## Handoff
+
+Implemented code, source-linked product research, calculation methods, attribution and measurements are committed. The sole infrastructure blocker is first-time Pages enablement above. Physical Android/Chrome and iOS/Safari alignment, camera rotation/front-lens/FOV calibration, sensor heading uncertainty and screen-reader checks remain explicit device-validation work, with steps in camera-methods.md. Deferred P2/P3 capabilities remain listed in the roadmap. Do not interpret sensor overlay as visual recognition or civil date converters as authority-specific observance calendars.
