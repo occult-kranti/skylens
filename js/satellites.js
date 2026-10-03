@@ -4,6 +4,7 @@ import { D2R, R2D, norm360 } from './astro.js';
 
 const CACHE_KEY = 'skylens.tle.v1';
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 h
+export const MAX_ELEMENT_AGE_DAYS = 7; // display policy, not a promised positional accuracy
 const GROUPS = ['stations', 'visual'];
 const CELESTRAK = (g) => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${g}&FORMAT=tle`;
 
@@ -11,6 +12,19 @@ let recs = [];          // [{name, rec}]
 let meta = { source: 'none', fetchedAt: null, count: 0, bad: 0 };
 export const satMeta = () => meta;
 export const satTotal = () => recs.length;
+
+export function tleEpoch(l1) {
+  const yy = Number(l1?.slice(18, 20)), day = Number(l1?.slice(20, 32));
+  if (!Number.isInteger(yy) || yy < 0 || yy > 99 || !(day >= 1 && day < 367)) return null;
+  const year = yy < 57 ? 2000 + yy : 1900 + yy;
+  const days = (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86400000;
+  if (day >= days + 1) return null;
+  return Date.UTC(year, 0, 1) + (day - 1) * 86400000;
+}
+
+export function elementAgeDays(epoch, date = new Date()) {
+  return Number.isFinite(epoch) ? Math.abs(date.getTime() - epoch) / 86400000 : Infinity;
+}
 
 export function parseTLE(text) {
   const lines = text.split(/\r?\n/).map((l) => l.trimEnd()).filter(Boolean);
@@ -31,37 +45,42 @@ function buildRecs(list) {
     if (seen.has(norad)) continue;
     try {
       const rec = lib.twoline2satrec(s.l1, s.l2);
-      if (rec && rec.no) { seen.add(norad); ok.push({ name: s.name, rec }); }
+      const epoch = tleEpoch(s.l1);
+      if (rec && rec.no && epoch !== null) { seen.add(norad); ok.push({ name: s.name, rec, epoch }); }
       else bad++;
     } catch { bad++; } // malformed TLE → quarantine (edge case E10)
   }
   return { ok, bad };
 }
 
-async function fetchText(url, timeoutMs = 10000) {
+async function fetchText(url, timeoutMs = 5000, signal) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeoutMs);
+  const abort = () => ctl.abort();
+  signal?.addEventListener('abort', abort, { once: true });
+  if (signal?.aborted) ctl.abort();
   try {
     const r = await fetch(url, { signal: ctl.signal });
     if (!r.ok) throw new Error(String(r.status));
     return await r.text();
-  } finally { clearTimeout(t); }
+  } finally { clearTimeout(t); signal?.removeEventListener('abort', abort); }
 }
 
-export async function initSatellites() {
+export async function initSatellites({ signal } = {}) {
   await (window.__satReady || Promise.resolve()); // local-then-CDN loader
   if (!window.satellite) { meta = { source: 'none', fetchedAt: null, count: 0, bad: 0 }; return meta; }
   // 1) fresh cache
   try {
     const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-    if (c && Date.now() - c.t < CACHE_TTL_MS && c.list?.length) {
+    if (c && Date.now() >= c.t && Date.now() - c.t < CACHE_TTL_MS && c.list?.length) {
       const { ok, bad } = buildRecs(c.list);
       if (ok.length) { recs = ok; meta = { source: 'cache', fetchedAt: c.t, count: ok.length, bad }; return meta; }
     }
   } catch { /* corrupt cache → refetch */ }
-  // 2) live CelesTrak (CORS-verified)
+  // 2) live CelesTrak; CORS/network support can change, so failure is expected.
   try {
-    const texts = await Promise.allSettled(GROUPS.map((g) => fetchText(CELESTRAK(g))));
+    const texts = await Promise.allSettled(GROUPS.map((g) => fetchText(CELESTRAK(g), 5000, signal)));
+    if (signal?.aborted) return meta;
     const list = texts.flatMap((r) => (r.status === 'fulfilled' ? parseTLE(r.value) : []));
     const { ok, bad } = buildRecs(list);
     if (ok.length) {
@@ -74,7 +93,8 @@ export async function initSatellites() {
   } catch {
     // 3) bundled snapshot fallback (edge case E11)
     try {
-      const r = await fetch('data/tle-snapshot.json');
+      const r = await fetch('data/tle-snapshot.json', { signal });
+      if (!r.ok) throw new Error(String(r.status));
       const j = await r.json();
       const { ok, bad } = buildRecs(j.satellites.map((s) => ({ name: s.name, l1: s.l1, l2: s.l2 })));
       recs = ok;
@@ -95,10 +115,15 @@ export function loadRecsFromList(list) {
 // Propagate all tracked satellites once (call at ~1 Hz). Returns those above minAlt.
 export function propagateNow(date, latDeg, lonDeg, minAlt = 0) {
   const lib = window.satellite;
+  if (!lib || !Number.isFinite(date?.getTime()) || !Number.isFinite(latDeg) || !Number.isFinite(lonDeg)) return [];
   const gmst = lib.gstime(date);
   const obsGd = { longitude: lonDeg * D2R, latitude: latDeg * D2R, height: 0 };
   const out = [];
-  for (const { name, rec } of recs) {
+  let suppressed = 0, oldestAgeDays = 0;
+  for (const { name, rec, epoch } of recs) {
+    const ageDays = elementAgeDays(epoch, date);
+    oldestAgeDays = Math.max(oldestAgeDays, ageDays);
+    if (ageDays > MAX_ELEMENT_AGE_DAYS) { suppressed++; continue; }
     try {
       const pv = lib.propagate(rec, date);
       if (!pv || !pv.position) continue;                 // decayed / undefined (E9)
@@ -108,9 +133,10 @@ export function propagateNow(date, latDeg, lonDeg, minAlt = 0) {
       const look = lib.ecfToLookAngles(obsGd, ecf);      // az rad CW from N, el rad
       const alt = look.elevation * R2D;
       if (alt < minAlt) continue;
-      out.push({ name, alt, az: norm360(look.azimuth * R2D), rangeKm: look.rangeSat });
+      out.push({ name, alt, az: norm360(look.azimuth * R2D), rangeKm: look.rangeSat, epoch: new Date(epoch).toISOString(), ageDays });
     } catch { /* per-satellite failure must not break the batch */ }
   }
   out.sort((a, b) => b.alt - a.alt);
+  Object.assign(meta, { suppressed, oldestAgeDays, stale: suppressed > 0 || meta.source === 'snapshot' });
   return out;
 }

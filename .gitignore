@@ -1,6 +1,7 @@
-# vendor libraries are fetched at runtime (local-first, pinned-CDN fallback) — see vendor/README.md
-vendor/astronomy.js
-vendor/satellite.min.js
-vendor/satellite.esm.js
+# Pinned, licensed vendor sources are committed for reproducible static hosting.
 node_modules/
 .DS_Store
+
+test-results/
+
+_site/

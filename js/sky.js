@@ -1,76 +1,65 @@
-// sky.js — stars (HYG J2000 catalog) + Sun/Moon/planets (astronomy-engine).
-import { D2R, lstDeg, norm360 } from './astro.js';
+// Shared astronomy adapter. Fixed catalogues are J2000; rotation includes precession/nutation.
+import { D2R, norm360, radecToAltAz } from './astro.js';
 
-// astronomy-engine: vendored locally, pinned CDN fallback (see index.html loader); null = degraded
-const AE = await Promise.resolve(window.__aeReady || import('../vendor/astronomy.js')).catch(() => null);
-
-let stars = []; // {raH, dec, mag, name, ra15deg, sd, cd}
+let AE = null;
+export const engineReady = Promise.resolve(globalThis.__aeReady || import('../vendor/astronomy.js'))
+  .then((engine) => { AE = engine; return engine; }).catch(() => null);
+export const engineAvailable = () => !!AE;
+let stars = [];
 export const starCount = () => stars.length;
 
 export async function loadStars(url = 'data/stars.json') {
   const res = await fetch(url);
   if (!res.ok) throw new Error('stars.json ' + res.status);
   const j = await res.json();
-  stars = j.stars.map(([ra, dec, mag, name]) => ({
-    raH: ra, dec, mag, name: name || null,
-    ra15: ra * 15, sd: Math.sin(dec * D2R), cd: Math.cos(dec * D2R),
-  }));
+  stars = j.stars.filter(([ra, dec, mag]) => [ra, dec, mag].every(Number.isFinite))
+    .map(([ra, dec, mag, name], index) => ({ id: `star:${index}`, raH: ra, dec, mag, name: name || null }));
   return stars.length;
 }
 
-// Fast per-frame path: ENU components per star from cached sin/cos(dec).
-// Returns array of {alt, az, mag, name} for stars above the horizon band and within magLimit.
-export function visibleStars(date, latDeg, lonDeg, magLimit, minAlt = -6) {
-  const lst = lstDeg(date, lonDeg);
-  const lat = latDeg * D2R, sl = Math.sin(lat), cl = Math.cos(lat);
-  const out = [];
-  for (let i = 0; i < stars.length; i++) {
-    const s = stars[i];
-    if (s.mag > magLimit) continue;
-    const H = (lst - s.ra15) * D2R;
-    const sH = Math.sin(H), cH = Math.cos(H);
-    const up = s.sd * sl + s.cd * cl * cH;
-    if (up < Math.sin(minAlt * D2R)) continue;
-    const east = -s.cd * sH;
-    const north = s.sd * cl - s.cd * sl * cH;
-    out.push({ alt: Math.asin(up > 1 ? 1 : up < -1 ? -1 : up) / D2R, az: norm360(Math.atan2(east, north) / D2R), mag: s.mag, name: s.name });
-  }
-  return out;
+// Rotation_EQJ_HOR's frame is [north, west, zenith], not our camera [east, up, south].
+// One matrix per observer/time, then only trigonometry per catalogue point.
+export function horizontalProjector(date, lat, lon, refraction = false) {
+  if (!AE) return (ra, dec) => radecToAltAz(ra, dec, lat, lon, date);
+  const r = AE.Rotation_EQJ_HOR(date, new AE.Observer(lat, lon, 0)).rot;
+  return (raH, decDeg) => {
+    const a = raH * 15 * D2R, d = decDeg * D2R;
+    const x = Math.cos(d) * Math.cos(a), y = Math.cos(d) * Math.sin(a), z = Math.sin(d);
+    const north = r[0][0] * x + r[1][0] * y + r[2][0] * z;
+    const west = r[0][1] * x + r[1][1] * y + r[2][1] * z;
+    const up = r[0][2] * x + r[1][2] * y + r[2][2] * z;
+    let alt = Math.atan2(up, Math.hypot(north, west)) / D2R;
+    if (refraction) alt += AE.Refraction('normal', alt);
+    return { alt, az: norm360(Math.atan2(-west, north) / D2R) };
+  };
 }
 
-const BODIES = [
-  { id: 'Sun', kind: 'sun' },
-  { id: 'Moon', kind: 'moon' },
-  { id: 'Mercury', kind: 'planet' }, { id: 'Venus', kind: 'planet' }, { id: 'Mars', kind: 'planet' },
-  { id: 'Jupiter', kind: 'planet' }, { id: 'Saturn', kind: 'planet' },
-  { id: 'Uranus', kind: 'planet' }, { id: 'Neptune', kind: 'planet' },
+// Call at 1 Hz; use minAlt=-90 for accessible search, including below-horizon targets.
+export function visibleStars(date, lat, lon, magLimit = 4.6, minAlt = -6, refraction = false) {
+  const project = horizontalProjector(date, lat, lon, refraction);
+  return stars.filter(s => s.mag <= magLimit).map(s => ({ ...s, kind: 'star', ...project(s.raH, s.dec) }))
+    .filter(s => s.alt >= minAlt);
+}
+
+export const BODIES = [
+  { id: 'Sun', kind: 'sun' }, { id: 'Moon', kind: 'moon' },
+  ...['Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'].map(id => ({ id, kind: 'planet' })),
 ];
 
-// Slower path (VSOP ephemerides) — call at ~1 Hz, not per frame.
-export function computeBodies(date, latDeg, lonDeg) {
+export function computeBodies(date, lat, lon, refraction = false) {
   if (!AE) return [];
-  const time = AE.MakeTime(date);
-  const obs = new AE.Observer(latDeg, lonDeg, 0);
-  const out = [];
-  for (const b of BODIES) {
+  const time = AE.MakeTime(date), obs = new AE.Observer(lat, lon, 0);
+  return BODIES.flatMap(b => {
     try {
       const eq = AE.Equator(b.id, time, obs, true, true);
-      const h = AE.Horizon(time, obs, eq.ra, eq.dec, null);
-      let mag = null, phase = null;
-      if (b.kind === 'planet' || b.kind === 'moon') {
-        try { const il = AE.Illumination(b.id, time); mag = il.mag; phase = il.phase_fraction; } catch { /* Sun has no illumination */ }
-      }
-      out.push({ name: b.id, kind: b.kind, alt: h.altitude, az: h.azimuth, mag, phase });
-    } catch { /* body not computable — skip */ }
-  }
-  return out;
+      const h = AE.Horizon(time, obs, eq.ra, eq.dec, refraction ? 'normal' : null);
+      const illumination = b.kind === 'sun' ? null : AE.Illumination(b.id, time);
+      return [{ id: `body:${b.id}`, name: b.id, kind: b.kind, alt: h.altitude, az: h.azimuth,
+        mag: illumination?.mag ?? null, phase: illumination?.phase_fraction ?? null }];
+    } catch { return []; }
+  });
 }
 
-// Sun altitude only — drives the time-adaptive chrome (day/dusk/night).
-export function sunAltitude(date, latDeg, lonDeg) {
-  if (!AE) return -30; // degraded → assume night styling
-  const time = AE.MakeTime(date);
-  const obs = new AE.Observer(latDeg, lonDeg, 0);
-  const eq = AE.Equator('Sun', time, obs, true, true);
-  return AE.Horizon(time, obs, eq.ra, eq.dec, null).altitude;
+export function sunAltitude(date, lat, lon) {
+  return computeBodies(date, lat, lon).find(b => b.kind === 'sun')?.alt ?? -30;
 }

@@ -1,4 +1,6 @@
-# SkyLens — Product & Technical Roadmap
+# SkyLens — Product & Technical Roadmap (historical v0.2)
+
+> Superseded for current status by [the 2026-10 execution roadmap](docs/2026-10-roadmap.md) and [verification](docs/VERIFICATION.md). Earlier “all green”, deployment, performance and solved-device claims below have not been carried forward as evidence. Baseline recovery found no Pages deployment and missing test dependencies.
 
 **Live-sky AR tracker: stars, constellations, deep-sky objects, planets, satellites, and aircraft — point your phone camera at the sky and name everything.**
 Version 0.2 · Prepared 2026-10-03 · License: MIT · Stack: 100% open source, zero-build static site, GitHub Pages hosted.

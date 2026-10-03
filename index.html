@@ -2,140 +2,146 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050608">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>SkyLens — point at the sky, name everything</title>
-<meta name="description" content="Live AR sky tracker: stars, constellations, deep-sky objects, planets, satellites and aircraft, identified in your phone camera. Open source, no install.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>SkyLens — explore the sky through your camera</title>
+<meta name="description" content="A camera sky overlay with calculated stars and planets, manual exploration, observing times, and transparent alignment controls. No account required.">
 <link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%2358c6ff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ffe9b0'/%3E%3C/svg%3E">
 </head>
 <body data-sun="night">
+<div id="app">
+  <div id="backdrop" aria-hidden="true"></div>
+  <video id="cam" autoplay playsinline muted aria-hidden="true"></video>
+  <canvas id="sky" tabindex="0" role="img" aria-label="Interactive sky. Drag or use arrow keys to look around. Search objects for a text alternative." aria-describedby="skyHelp"></canvas>
+  <p id="skyHelp" class="sr-only">Focus the sky and use arrow keys to explore, or use Search objects below. Objects are calculated from time, location and sensors, not recognized from camera images.</p>
 
-<div id="backdrop"></div>
-<video id="cam" autoplay playsinline muted></video>
-<canvas id="sky"></canvas>
-
-<!-- corner telemetry -->
-<div class="corner" id="cTL"><span id="brand">SKYLENS</span><br><span class="dim" id="telTime">--:--:-- UTC</span></div>
-<div class="corner" id="cTR"><span id="telAim">--</span><br><span class="dim" id="telPos">locating…</span><br><span class="dim" id="telCount"></span></div>
-<div class="corner" id="cBL">
-  <div class="feeds">
-    <span class="f"><span class="dot st-off" id="dotTle"></span>TLE</span>
-    <span class="f"><span class="dot st-off" id="dotAdsb"></span>ADS-B</span>
-    <span class="f"><span class="dot st-off" id="dotCam"></span>CAM</span>
-    <span class="f"><span class="dot st-off" id="dotMotion"></span>IMU</span>
-  </div>
-</div>
-
-<!-- tap-to-identify card -->
-<div id="infocard" hidden></div>
-<div id="toasts"></div>
-
-<!-- layer chips (quick toggles) -->
-<div id="chips" role="toolbar" aria-label="layers">
-  <button class="chip on" data-layer="stars">Stars</button>
-  <button class="chip on" data-layer="constellations">Constellations</button>
-  <button class="chip on" data-layer="dsos">Deep sky</button>
-  <button class="chip on" data-layer="sats">Satellites</button>
-  <button class="chip on" data-layer="planes">Aircraft</button>
-  <button class="chip on" data-layer="grid">Grid</button>
-  <button class="chip" data-layer="night">Night</button>
-</div>
-
-<!-- inspector dock -->
-<div id="dock">
-  <div id="dockHandle" role="button" aria-label="toggle panel"></div>
-  <div id="dockHead">
-    <div id="tapeStrip"></div>
-    <div id="tapeReadout">—</div>
-  </div>
-  <div class="tabs">
-    <button class="tab active" data-tab="sky">Sky</button>
-    <button class="tab" data-tab="tonight">Tonight</button>
-    <button class="tab" data-tab="traffic">Traffic</button>
-    <button class="tab" data-tab="settings">Settings</button>
+  <header class="telemetry" aria-label="Sky context">
+    <div id="cTL"><span id="brand">SKYLENS</span><span id="telTime">Current sky · UTC</span></div>
+    <div id="cTR"><span id="telAim">Manual sky</span><span id="telPos">Demo: New York · choose your location</span><span id="telCount" class="sr-only"></span></div>
+  </header>
+  <div id="viewControls">
+    <div class="actionrow">
+      <button id="cameraToggle" class="primary" type="button">Enable camera</button>
+      <button id="openSearch" type="button">Search objects</button>
+      <button id="openAlign" type="button">Align</button>
+    </div>
+    <p id="cameraStatus" role="status">Manual sky · camera is off</p>
+    <p id="sensorStatus">Drag to explore. Choose your location in Settings.</p>
+    <div id="simulationBanner" hidden><span id="simulationText">Simulated sky</span> <button id="returnLive" type="button">Return to now</button></div>
   </div>
 
-  <div class="panel active" data-panel="sky"><ul id="skyList"></ul></div>
+  <section id="infocard" aria-label="Selected object" hidden></section>
+  <div id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
 
-  <div class="panel" data-panel="tonight"><div id="tonightBody" class="cards"></div></div>
-
-  <div class="panel" data-panel="traffic">
-    <h3 class="sect">Satellites</h3>
-    <div class="meta" id="satMeta"></div>
-    <ul id="satList"></ul>
-    <h3 class="sect">Aircraft</h3>
-    <div class="meta" id="planeMeta"></div>
-    <ul id="planeList"></ul>
-  </div>
-
-  <div class="panel" data-panel="settings">
-    <div class="setrow"><label for="setFov">Field of view</label><input type="range" id="setFov" min="30" max="100" step="1"><span class="val" id="fovVal"></span></div>
-    <div class="setrow"><label for="setMag">Star magnitude limit</label><input type="range" id="setMag" min="2" max="4.6" step="0.1"><span class="val" id="magVal"></span></div>
-    <div class="setrow"><label for="setGrid">Alt-az grid</label><input type="checkbox" id="setGrid"></div>
-    <div class="setrow"><label for="setLabels">Labels</label><input type="checkbox" id="setLabels"></div>
-    <div class="setrow"><label for="setSats">Satellites</label><input type="checkbox" id="setSats"></div>
-    <div class="setrow"><label for="setPlanes">Aircraft</label><input type="checkbox" id="setPlanes"></div>
-    <div class="setrow"><label for="setNight">Night-vision (red)</label><input type="checkbox" id="setNight"></div>
-    <div class="setrow"><label>Location</label>
-      <div class="locrow">
-        <input id="locLat" placeholder="lat" inputmode="decimal">
-        <input id="locLon" placeholder="lon" inputmode="decimal">
-        <button id="setLoc">Set</button>
-        <button id="locGps">GPS</button>
+  <section id="dock" aria-label="Sky tools">
+    <button id="dockHandle" type="button" aria-expanded="false" aria-controls="dockContent"><span id="dockLabel">Explore &amp; tools</span><span id="tapeReadout" aria-hidden="true">—</span><span class="handle-indicator" aria-hidden="true">⌃</span></button>
+    <div id="dockContent" hidden>
+      <div id="dockHead" aria-hidden="true"><div id="tapeStrip"></div></div>
+      <div class="tabs" role="tablist" aria-label="Sky tools">
+        <button class="tab active" id="tabSky" role="tab" aria-selected="true" aria-controls="panelSky" data-tab="sky">Sky</button>
+        <button class="tab" id="tabExplore" role="tab" aria-selected="false" aria-controls="panelExplore" tabindex="-1" data-tab="tonight">Explore</button>
+        <button class="tab" id="tabTraffic" role="tab" aria-selected="false" aria-controls="panelTraffic" tabindex="-1" data-tab="traffic">Traffic</button>
+        <button class="tab" id="tabSaved" role="tab" aria-selected="false" aria-controls="panelSaved" tabindex="-1" data-tab="saved">Saved</button>
+        <button class="tab" id="tabSettings" role="tab" aria-selected="false" aria-controls="panelSettings" tabindex="-1" data-tab="settings">Settings</button>
       </div>
+
+      <section class="panel active" id="panelSky" role="tabpanel" aria-labelledby="tabSky" data-panel="sky">
+        <label for="objectSearch">Find a star, planet or deep-sky object</label>
+        <input id="objectSearch" type="search" placeholder="Try Moon, Sirius or M31" autocomplete="off" aria-describedby="searchMeta">
+        <p id="searchMeta" class="meta" role="status">Search the supported catalog, including objects below the horizon.</p>
+        <ul id="searchList" hidden></ul>
+        <div id="skyListGroup"><h2 class="sect">Bright objects above the horizon</h2><ul id="skyList"><li class="empty">Loading the sky catalog…</li></ul></div>
+        <button id="stopGuidance" class="subtle" type="button">Stop guidance</button>
+        <details id="layersDetails"><summary>Layers &amp; visibility</summary>
+          <div id="chips" role="group" aria-label="Sky layers">
+            <button class="chip on" type="button" data-layer="stars" aria-pressed="true">Stars</button>
+            <button class="chip on" type="button" data-layer="bodies" aria-pressed="true">Sun, Moon &amp; planets</button>
+            <button class="chip on" type="button" data-layer="constellations" aria-pressed="true">Constellations</button>
+            <button class="chip on" type="button" data-layer="dsos" aria-pressed="true">Deep sky</button>
+            <button class="chip on" type="button" data-layer="grid" aria-pressed="true">Grid</button>
+            <button class="chip on" type="button" data-layer="labels" aria-pressed="true">Labels</button>
+            <button class="chip" type="button" data-layer="night" aria-pressed="false">Night palette</button>
+          </div>
+          <div class="setrow"><label for="setMag">Star magnitude limit</label><input type="range" id="setMag" min="2" max="4.6" step="0.1"><output id="magVal" for="setMag"></output></div>
+        </details>
+        <nav class="related" aria-label="Related calculators"><a href="https://occult-kranti.github.io/astrology-sim-ant/pages/book3/nativity.html">Astrology charts ↗</a><a href="https://occult-kranti.github.io/astrology-sim-ant/pages/calendars.html">Calendars &amp; tools ↗</a></nav>
+      </section>
+
+      <section class="panel" id="panelExplore" role="tabpanel" aria-labelledby="tabExplore" data-panel="tonight" hidden>
+        <h2>Explore a moment</h2>
+        <form id="timeForm"><label for="skyTime">Date and time (UTC)</label><div class="inputrow"><input type="datetime-local" id="skyTime" min="1900-01-01T00:00" max="2100-12-31T23:59" required><button type="submit">Set time</button><button id="timeNow" type="button">Now</button></div></form>
+        <p class="meta">UTC, not your device’s local time. Supported exploration: 1900–2100. Live traffic is unavailable for simulated time.</p>
+        <h2 class="sect">Observing conditions</h2>
+        <div id="tonightBody" class="cards"><p class="empty">Loading astronomical calculations…</p></div>
+        <p class="meta">Event times are UTC. “No event” can occur at high latitudes. Meteor ZHR is an ideal reference rate, not a local forecast.</p>
+        <section id="orbitView" aria-label="Solar system view"></section>
+      </section>
+
+      <section class="panel" id="panelTraffic" role="tabpanel" aria-labelledby="tabTraffic" data-panel="traffic" hidden>
+        <h2>Optional live data</h2>
+        <p class="help">Celestial calculations work without these feeds. Live data can be delayed or unavailable.</p>
+        <div class="setrow"><label for="setSats">Show satellites</label><input type="checkbox" id="setSats" aria-describedby="satHelp"></div>
+        <p id="satHelp" class="help">Uses CelesTrak orbital elements or a dated bundled snapshot. A calculated position does not imply a satellite is illuminated or visible.</p>
+        <p class="meta" id="satMeta">Satellites are off.</p><ul id="satList"></ul>
+        <div class="setrow"><label for="setPlanes">Enable aircraft feed</label><input type="checkbox" id="setPlanes" aria-describedby="aircraftPrivacy"></div>
+        <p id="aircraftPrivacy" class="help">Enabling sends your selected latitude and longitude, rounded to 3 decimal places, to AvioADSB about every 12 seconds while this page is visible and the feed is enabled, including when you open another panel. Requests pause during simulated time and require a location you selected. No camera frames are sent. Community data is not for navigation.</p>
+        <p class="meta" id="planeMeta">Aircraft feed is off.</p><ul id="planeList"></ul>
+        <div class="feeds" aria-label="Feed status"><span class="f"><span class="dot st-off" id="dotTle" aria-hidden="true"></span><span id="tleStatus">TLE: off</span></span><span class="f"><span class="dot st-off" id="dotAdsb" aria-hidden="true"></span><span id="adsbStatus">Aircraft: off</span></span></div>
+      </section>
+
+      <section class="panel" id="panelSaved" role="tabpanel" aria-labelledby="tabSaved" data-panel="saved" hidden>
+        <h2>Saved objects</h2><ul id="savedList"><li class="empty">Select an object, then choose Save object.</li></ul>
+        <h2 class="sect">Observation notes</h2><form id="notesForm"><label for="observationNote">A note for your next session</label><textarea id="observationNote" rows="3" maxlength="4000" placeholder="Object, sky conditions, what you saw…"></textarea><div class="inputrow"><button type="submit">Save note</button><button type="button" id="clearNote">Clear note</button></div><p id="noteStatus" class="meta" role="status">Stored only in this browser.</p></form>
+      </section>
+
+      <section class="panel" id="panelSettings" role="tabpanel" aria-labelledby="tabSettings" data-panel="settings" hidden>
+        <h2>Your sky</h2><p id="locationStatus" class="help">Demo location: New York. Set a location to see your own sky.</p>
+        <form id="locationForm"><div class="locationFields"><div><label for="locLat">Latitude (° north)</label><input id="locLat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></div><div><label for="locLon">Longitude (° east)</label><input id="locLon" type="number" min="-180" max="180" step="any" inputmode="decimal" required></div></div><div class="inputrow"><button id="setLoc" type="submit">Set location</button><button id="locGps" type="button">Use my location</button></div></form>
+        <p class="help">Location is used for calculations on this device. It is sent externally only if you enable the aircraft feed.</p>
+        <details id="alignmentDetails"><summary>Alignment &amp; camera calibration</summary>
+          <p class="help">Sensor alignment is approximate. Match a known distant landmark or celestial object. Field of view is the estimated lens diagonal angle before the preview is cropped to fill the viewport. The projection accounts for that crop; camera zoom and rotation may require adjustment.</p>
+          <div class="setrow"><label for="setFov">Diagonal field of view</label><input type="range" id="setFov" min="30" max="120" step="1"><output id="fovVal" for="setFov"></output></div>
+          <div class="setrow"><label for="setHeading">Heading correction</label><input type="range" id="setHeading" min="-180" max="180" step="0.5"><output id="headingVal" for="setHeading"></output></div>
+          <div class="setrow"><label for="setPitch">Altitude correction</label><input type="range" id="setPitch" min="-45" max="45" step="0.5"><output id="pitchVal" for="setPitch"></output></div>
+          <button id="resetAlignment" type="button">Reset calibration</button>
+          <p class="help">Compass heading may be magnetic or uncertain. A manual correction is a calibration estimate, not a measured true-north solution. No visual recognition is performed.</p>
+        </details>
+        <div class="setrow"><label for="setGrid">Altitude / azimuth grid</label><input type="checkbox" id="setGrid"></div>
+        <div class="setrow"><label for="setLabels">Object labels</label><input type="checkbox" id="setLabels"></div>
+        <div class="setrow"><label for="setNight">Night palette (red)</label><input type="checkbox" id="setNight"></div>
+        <div class="feeds"><span class="f"><span class="dot st-off" id="dotCam" aria-hidden="true"></span><span id="camFeedStatus">Camera: off</span></span><span class="f"><span class="dot st-off" id="dotMotion" aria-hidden="true"></span><span id="motionFeedStatus">Motion: off</span></span></div>
+        <details><summary>Methods, data &amp; privacy</summary><div class="about">
+          <p>SkyLens calculates positions from time, location, catalog data and sensors. A label does not establish that an object is visible through cloud or daylight. Camera frames remain on this device.</p>
+          <p>Ephemerides &amp; events: <a href="https://github.com/cosinekitty/astronomy">Astronomy Engine</a> (MIT). Stars: HYG Database v4.1. Constellations &amp; Messier objects: d3-celestial (BSD, © Olaf Frohn). Satellites: <a href="https://celestrak.org">CelesTrak</a> elements and satellite.js SGP4 (MIT). Aircraft: <a href="https://avioadsb.org">AvioADSB</a> (CC BY 4.0).</p>
+          <p>Source catalogs and orbital data may be incomplete or stale. Live camera alignment still needs calibration and physical-device verification.</p>
+          <a href="test.html?auto=1" id="selftestLink" target="_blank" rel="noopener">Run diagnostics &amp; stress tests ↗</a>
+        </div></details>
+      </section>
     </div>
-    <div class="about">
-      SkyLens v0.2 — open source (MIT).<br>
-      Star catalog: HYG Database v4.1 · Constellations &amp; Messier objects: d3-celestial data (BSD, © Olaf Frohn) · Satellites: <a href="https://celestrak.org" rel="noopener">CelesTrak</a> TLEs, propagated by satellite.js (SGP4) ·
-      Flight data: <a href="https://avioadsb.org" rel="noopener">AvioADSB</a> (CC BY 4.0), community ADS-B — not for navigation ·
-      Ephemerides &amp; events: astronomy-engine (MIT).<br>
-      Everything runs on your device — no account, no uploads.<br>
-      <a href="#" id="selftestLink">Run diagnostics &amp; stress tests</a>
-    </div>
-  </div>
+  </section>
 </div>
 
-<!-- first-run consent -->
-<div id="onboard" hidden>
+<dialog id="onboard" aria-labelledby="welcomeTitle">
   <div class="sheet">
-    <h1>SKYLENS</h1>
-    <p class="sub">Point your phone at the sky. Name every star, satellite and plane.</p>
-    <ul>
-      <li><b>camera</b> live backdrop for augmented reality</li>
-      <li><b>motion</b> aims the overlay where you point</li>
-      <li><b>location</b> computes your local sky — never leaves the device</li>
-    </ul>
-    <div class="row">
-      <button id="btnAR">Enable AR view</button>
-      <button id="btnManual">Manual mode</button>
-    </div>
-    <div id="httpsWarn" hidden>Camera &amp; motion need HTTPS — only Manual mode is available here.</div>
-    <div class="micro">No account · no uploads · open source</div>
+    <p class="eyebrow">SKYLENS</p><h1 id="welcomeTitle">Meet the sky above you.</h1>
+    <p class="sub">Point your phone and explore calculated stars and planets over the live camera.</p>
+    <ul><li><b>Camera</b><span>A live backdrop. Frames stay on your device.</span></li><li><b>Motion</b><span>Aims the overlay. Alignment may need adjustment.</span></li><li><b>Location</b><span>Choose your place in Settings for the correct local sky.</span></li></ul>
+    <p class="help">This is a sensor-based projection, not image recognition. You can also explore by dragging the sky.</p>
+    <div class="row"><button id="btnAR" type="button">Enable camera</button><button id="btnManual" type="button">Explore without camera</button></div>
+    <p id="httpsWarn" hidden>Camera and motion require HTTPS. Manual exploration is available.</p>
+    <p class="micro">No account · optional live feeds · open source</p>
   </div>
-</div>
+</dialog>
 
 <script>
-/* satellite.js loader: local vendor first, pinned CDN fallback (keeps repo text-only) */
-window.__satReady = new Promise((resolve) => {
-  const inject = (src, ok, fail) => {
-    const s = document.createElement('script');
-    s.src = src; s.onload = () => resolve(ok); s.onerror = fail;
-    document.head.appendChild(s);
-  };
-  inject('vendor/satellite.min.js', 'local', () =>
-    inject('https://cdn.jsdelivr.net/npm/satellite.js@4.1.4/dist/satellite.min.js', 'cdn', () => resolve('none')));
-});
+window.__satReady = import('./vendor/satellite.esm.js').then(lib => { window.satellite = lib; return 'local'; }).catch(() => 'none');
 </script>
 <script>
-/* astronomy-engine loader: local vendor first, pinned CDN fallback */
-window.__aeReady = import('./vendor/astronomy.js').catch(() =>
-  import('https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/esm/astronomy.js'));
+/* Pinned local engine: no third-party CDN dependency. */
+window.__aeReady = import('./vendor/astronomy.js');
 window.__aeReady.catch(() => {});
 </script>
 <script type="module" src="js/main.js"></script>
