@@ -34,3 +34,11 @@ New screens: Explore has separate Tonight/Solar system tabs; Tools links actual 
 Full local `npm test` passed: 36 original cases, independent ephemeris/event fixtures, 26 camera cases, 13 integration cases, 9 naming groups and 14 observing cases. Node syntax, HTML ID/ARIA linkage and git whitespace checks passed. Independent review repaired a minute-cache boundary error and unavailable-event wording; see2026-10-05-review.md. The fixed HYG Sol origin row is excluded at load after IDs are assigned, preserving all existing saved-star IDs.
 
 Runtime evidence is not yet claimed here. Local HTTP binding still fails EPERM, so mandatory Chromium CI journeys run beneath /skylens/ at320×568,390×844,844×390 and1365×900. CI installs a Devanagari fallback font for the Linux test runner only; the application uses local system fonts and makes no font-CDN request. Physical phone alignment and screen-reader checks remain pending.
+
+## Accepted scope additions during implementation
+
+The user additionally requested API tracking, a README human-action/account checklist, and constellations. Names now include88 IAUidentities/89figure entries. Constellations enter search, saved objects and guidance with stable `const:` IDs and an explicit catalogue-anchor convention; no rise/set time is invented for an extended constellation. Enabled satellite/aircraft feeds join search; satellites use stable NORAD IDs and remain filtered by orbital epoch age.
+
+Tools identifies local calculations versus public APIs and shows the selected time/location. CelesTrak checks respect a two-hour interval and retain truthful fallback timestamps; aircraft requests stop at known quota. The current default scope is existing satellites plus aircraft, with no mandatory paid API or account. A dated, one-request-per-provider real-browser diagnostic records API/CORS availability independently of mocked failure tests. Full coverage of all orbiting objects/aircraft is not claimed.
+
+README now lists concrete administrator/device/provider actions, reasons and links, distinguishing current free/public sources from optional account/server work. Unknown requirements are not converted into invented mandatory account creation.

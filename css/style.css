@@ -133,6 +133,10 @@ body.camera-on #backdrop { display: none; }
 .tool-links a span { font-weight: 600; font-size: 14px; }
 .tool-links a small { color: var(--text-2); font-size: 12px; line-height: 1.6; }
 .tool-links a:hover span { text-decoration: underline; text-underline-offset: .2em; }
+.tracking-context { margin-bottom: 20px; padding-bottom: 7px; border-bottom: 1px solid var(--line); }
+.tracking-context h3 { font-size: 13px; color: var(--accent); margin: 0 0 12px; }
+.tracking-context .grid { font-size: 11px; }
+#refreshSatellites { margin-top: 10px; }
 #stopGuidance { margin-top: 12px; }
 .subtle { font-weight: 400; background: transparent; }
 .related { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }

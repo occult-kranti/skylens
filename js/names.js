@@ -9,6 +9,8 @@ export const NAME_SOURCES = Object.freeze({
     url: './docs/hindi-names.md', reviewed: NAME_DATA_DATE }),
   'editorial-hindi': Object.freeze({ title: 'Common Hindi vocabulary; see naming-method notes',
     url: './docs/hindi-names.md', reviewed: NAME_DATA_DATE }),
+  'iau-constellations': Object.freeze({ title: 'IAU: The Constellations — names, regions and asterisms',
+    url: 'https://www.iau.org/IAU/IAU/Astronomy-FAQs/Constellations.aspx', reviewed: NAME_DATA_DATE }),
 });
 
 // Remove Latin pronunciation marks, not Devanagari vowel signs/virama.
@@ -100,7 +102,121 @@ add('Polaris', 'ध्रुव तारा', 'Dhruv Tara', 'star', 'traditiona
   ['Dhruva Tara', 'Dhruva tārā', 'Dhruv', 'ध्रुव', 'ध्रुवतारा', 'पोलारिस', 'Pole Star', 'North Star'],
   ['ध्रुव तारा', 'Dhruva Tara'], 'The present-day Pole Star; not every historical pole star is Polaris.');
 
-export const NAME_COVERAGE = Object.freeze({ bodies: 11, stars: starSpellings.length + 1 });
+// All local constellation labels: 89 entries, because Serpens has two plotted parts.
+// These are editorial readings of international names, not translated mythology,
+// nakshatra identities, zodiac signs, or IAU-approved Hindi nomenclature.
+const constellationSpellings = [
+  ['Andromeda', 'एंड्रोमेडा'],
+  ['Antlia', 'एंट्लिया'],
+  ['Apus', 'एपस'],
+  ['Aquarius', 'अक्वेरियस'],
+  ['Aquila', 'अक्विला'],
+  ['Ara', 'आरा'],
+  ['Aries', 'एरीज़'],
+  ['Auriga', 'ऑराइगा'],
+  ['Boötes', 'बोओटीज़'],
+  ['Caelum', 'सीलम'],
+  ['Camelopardalis', 'कैमेलोपार्डालिस'],
+  ['Cancer', 'कैंसर'],
+  ['Canes Venatici', 'केनीज़ वेनैटिसाई'],
+  ['Canis Major', 'केनिस मेजर'],
+  ['Canis Minor', 'केनिस माइनर'],
+  ['Capricornus', 'कैप्रिकॉर्नस'],
+  ['Carina', 'करीना'],
+  ['Cassiopeia', 'कैसिओपिया'],
+  ['Centaurus', 'सेंटॉरस'],
+  ['Cepheus', 'सीफियस'],
+  ['Cetus', 'सीटस'],
+  ['Chamaeleon', 'कैमीलियन'],
+  ['Circinus', 'सर्सिनस'],
+  ['Columba', 'कोलंबा'],
+  ['Coma Berenices', 'कोमा बेरेनाइसीज़'],
+  ['Corona Austrina', 'कोरोना ऑस्ट्रिना', ['Corona Australis', 'कोरोना ऑस्ट्रालिस']],
+  ['Corona Borealis', 'कोरोना बोरिऐलिस'],
+  ['Corvus', 'कॉर्वस'],
+  ['Crater', 'क्रेटर'],
+  ['Crux', 'क्रक्स'],
+  ['Cygnus', 'सिग्नस'],
+  ['Delphinus', 'डेल्फिनस'],
+  ['Dorado', 'डोराडो'],
+  ['Draco', 'ड्रेको'],
+  ['Equuleus', 'इक्वूलियस'],
+  ['Eridanus', 'इरिडेनस'],
+  ['Fornax', 'फ़ॉर्नैक्स'],
+  ['Gemini', 'जेमिनी'],
+  ['Grus', 'ग्रस'],
+  ['Hercules', 'हर्क्युलीज़'],
+  ['Horologium', 'होरोलोजियम'],
+  ['Hydra', 'हाइड्रा'],
+  ['Hydrus', 'हाइड्रस'],
+  ['Indus', 'इंडस'],
+  ['Lacerta', 'लसर्टा'],
+  ['Leo', 'लियो'],
+  ['Leo Minor', 'लियो माइनर'],
+  ['Lepus', 'लेपस'],
+  ['Libra', 'लीब्रा'],
+  ['Lupus', 'लूपस'],
+  ['Lynx', 'लिंक्स'],
+  ['Lyra', 'लाइरा'],
+  ['Mensa', 'मेंसा'],
+  ['Microscopium', 'माइक्रोस्कोपियम'],
+  ['Monoceros', 'मोनोसेरस'],
+  ['Musca', 'मस्का'],
+  ['Norma', 'नॉर्मा'],
+  ['Octans', 'ऑक्टैन्स'],
+  ['Ophiuchus', 'ओफ़ियूकस'],
+  ['Orion', 'ओरायन', ['ओरियन']],
+  ['Pavo', 'पावो'],
+  ['Pegasus', 'पेगसस'],
+  ['Perseus', 'पर्सियस'],
+  ['Phoenix', 'फ़ीनिक्स'],
+  ['Pictor', 'पिक्टर'],
+  ['Pisces', 'पाइसीज़'],
+  ['Piscis Austrinus', 'पाइसिस ऑस्ट्राइनस'],
+  ['Puppis', 'पपिस'],
+  ['Pyxis', 'पिक्सिस'],
+  ['Reticulum', 'रेटिक्युलम'],
+  ['Sagitta', 'सजिटा'],
+  ['Sagittarius', 'सैजिटेरियस'],
+  ['Scorpius', 'स्कॉर्पियस'],
+  ['Sculptor', 'स्कल्प्टर'],
+  ['Scutum', 'स्क्यूटम'],
+  ['Serpens Caput', 'सर्पेन्स कैपुट'],
+  ['Serpens Cauda', 'सर्पेन्स कॉडा'],
+  ['Sextans', 'सेक्स्टैन्स'],
+  ['Taurus', 'टॉरस'],
+  ['Telescopium', 'टेलिस्कोपियम'],
+  ['Triangulum', 'ट्राइऐंग्युलम'],
+  ['Triangulum Australe', 'ट्राइऐंग्युलम ऑस्ट्राली'],
+  ['Tucana', 'टुकाना'],
+  ['Ursa Major', 'अर्सा मेजर'],
+  ['Ursa Minor', 'अर्सा माइनर'],
+  ['Vela', 'वीला'],
+  ['Virgo', 'वर्गो'],
+  ['Volans', 'वोलैन्स'],
+  ['Vulpecula', 'वल्पेक्युला'],
+];
+const constellationNotes = {
+  'Ursa Major': 'The Big Dipper (Saptarshi) is a seven-star pattern within Ursa Major, not the whole constellation.',
+  'Ursa Minor': 'The Little Dipper is a pattern within Ursa Minor, not the whole constellation.',
+  Taurus: 'The Pleiades (Krittika) is a star cluster in Taurus, not a separate IAU constellation or the whole of Taurus.',
+  'Corona Austrina': 'The catalogue retains Corona Austrina; the current IAU name is Corona Australis (CrA). Both names are searchable.',
+  'Serpens Caput': 'The head part of Serpens; Caput and Cauda are two parts of one IAU constellation.',
+  'Serpens Cauda': 'The tail part of Serpens; Caput and Cauda are two parts of one IAU constellation.',
+};
+for (const [english, hindi, synonyms = []] of constellationSpellings) {
+  const sources = ['editorial-transliteration', 'iau-constellations'];
+  if (['Ursa Major', 'Ursa Minor', 'Taurus'].includes(english)) sources.push('ncert-curiosity-12');
+  add(english, hindi, english, 'constellation', 'transliteration', synonyms, [], constellationNotes[english] || '', sources);
+}
+// Canonical IAU names also work for callers without the source catalogue's part labels.
+add('Serpens', 'सर्पेन्स', 'Serpens', 'constellation', 'transliteration', [], [],
+  'One IAU constellation with two separate parts: Serpens Caput and Serpens Cauda.', ['editorial-transliteration', 'iau-constellations']);
+add('Corona Australis', 'कोरोना ऑस्ट्रालिस', 'Corona Australis', 'constellation', 'transliteration',
+  ['Corona Austrina', 'कोरोना ऑस्ट्रिना'], [], '', ['editorial-transliteration', 'iau-constellations']);
+
+export const NAME_COVERAGE = Object.freeze({ bodies: 11, stars: starSpellings.length + 1,
+  constellations: 88, constellationEntries: constellationSpellings.length });
 function inputFields(object) {
   if (typeof object === 'string') return { name: object };
   const data = object?.data && typeof object.data === 'object' ? object.data : object;
@@ -109,10 +225,10 @@ function inputFields(object) {
 }
 export function objectNameRecord(object) {
   const { name, kind } = inputFields(object);
-  const eligible = !kind || ['star', 'sun', 'moon', 'planet', 'body', 'dwarf-planet'].includes(kind);
+  const eligible = !kind || ['star', 'sun', 'moon', 'planet', 'body', 'dwarf-planet', 'constellation'].includes(kind);
   const key = normalizeNameQuery(name.replace(/^body:/, ''));
   const known = eligible ? namedRecords.get(key) : null;
-  if (known) return known;
+  if (known && (!kind || (kind === 'constellation') === (known.kind === 'constellation'))) return known;
   return Object.freeze({ english: name, hindi: null, transliteration: null, kind: kind || 'object',
     method: 'catalogue', methodLabel: METHOD_LABELS.catalogue, synonyms: Object.freeze([]),
     traditionalAliases: Object.freeze([]), aliasNote: '', sourceIds: Object.freeze([]) });

@@ -139,7 +139,7 @@ export function createRenderer(canvas) {
         }
         if (scene.layers.labels && c.label) {
           const p = proj(c.label.alt, c.label.az);
-          if (p) label(c.name.toUpperCase(), p.x, p.y, PAL.constLabel, 9, 6);
+          if (p) label(displayName(c, scene.nameMode), p.x, p.y, PAL.constLabel, 12, 6);
         }
       }
     }

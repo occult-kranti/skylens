@@ -140,12 +140,15 @@ export function createUI(handlers = {}) {
       $('telTime').textContent = `${isLive ? 'Live' : 'Simulated'} · ${instant.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
       if (!timeDirty && document.activeElement !== $('skyTime')) $('skyTime').value = instant.toISOString().slice(0, 16);
       $('simulationText').textContent = `Simulated: ${instant.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+      $('toolsTime').textContent = `${isLive ? 'Live' : 'Simulated'} · ${instant.toISOString().slice(0, 19).replace('T', ' ')} UTC`;
     }
     $('simulationBanner').hidden = isLive;
     const demo = !loc || /default|demo/i.test(loc.source || '');
     const position = demo ? 'Demo: New York · choose your location' : `${loc.source === 'gps' ? 'Device' : 'Selected'}: ${finite(loc.lat, 3)}°, ${finite(loc.lon, 3)}°${Number.isFinite(loc.accuracy) ? ` ±${Math.round(loc.accuracy)} m` : ''}`;
     $('telPos').textContent = position; $('telPos').classList.toggle('demo', demo);
     $('locationStatus').textContent = demo ? 'Demo location: New York. Set a location to see your own sky.' : `${loc?.name ? `${loc.name} · ` : ''}${position}`;
+    $('toolsLocation').textContent = demo ? 'Demo: New York · set your own location' : `${loc?.name ? `${loc.name} · ` : ''}${position}`;
+    trackingStatus();
     $('telAim').textContent = Number.isFinite(az) && Number.isFinite(alt) ? `${compass16(az)} ${finite(az)}° · altitude ${fmtAlt(alt)}` : 'Manual sky';
     $('telCount').textContent = counts;
   }
@@ -162,6 +165,11 @@ export function createUI(handlers = {}) {
   }
   const nameMode = () => currentState?.nameMode || 'bilingual';
   const named = item => displayName(item, nameMode());
+  function utcStamp(value) {
+    if (value == null) return null;
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? `${date.toISOString().slice(0, 19).replace('T', ' ')} UTC` : null;
+  }
   function setName(element, item) {
     const record = objectNameRecord(item);
     element.replaceChildren();
@@ -228,7 +236,7 @@ export function createUI(handlers = {}) {
         if (nameRecord.aliasNote) card.append(node('p', nameRecord.aliasNote, 'meta'));
       }
     } else if (['star', 'sun', 'moon', 'planet', 'body', 'dso'].includes(d.kind)) card.append(node('p', 'Catalog name retained; no reviewed Hindi equivalent is included yet.', 'name-method meta'));
-    const rows = [['Type', d.kind], ['Altitude / azimuth', `${Number.isFinite(d.alt) ? fmtAlt(d.alt) : '—'} / ${finite(d.az, 1)}°`]];
+    const rows = [['Type', d.kind], [d.kind === 'constellation' ? 'Anchor altitude / azimuth' : 'Altitude / azimuth', `${Number.isFinite(d.alt) ? fmtAlt(d.alt) : '—'} / ${finite(d.az, 1)}°`]];
     if (Number.isFinite(d.mag)) rows.push(['Magnitude', finite(d.mag, 1)]);
     if (Number.isFinite(d.phase)) rows.push(['Illuminated', `${finite(d.phase * 100)}%`]);
     if (Number.isFinite(d.rangeKm)) rows.push(['Range', `${finite(d.rangeKm)} km`]);
@@ -237,6 +245,7 @@ export function createUI(handlers = {}) {
     if (d.gsKt != null) rows.push(['Ground speed', `${finite(d.gsKt)} kt`]);
     if (d.dim != null) rows.push(['Angular size', `${d.dim} arcmin`]);
     addRows(card, rows);
+    if (d.kind === 'constellation') card.append(node('p', d.description || 'Guidance targets the catalog label anchor, not a single star or full boundary. Stick figures are illustrative.', 'help'));
     if (d.alt < 0) card.append(node('p', 'Below the horizon at the selected time and location.', 'help warning'));
     const controls = node('div', null, 'inputrow');
     controls.append(button('Guide to object', () => { handlers.locate?.({ ...d, label:d.name }); card.hidden = true; $('sky').focus(); }, 'primary'));
@@ -301,7 +310,7 @@ export function createUI(handlers = {}) {
     $('searchList').hidden = !currentQuery; $('skyListGroup').hidden = !!currentQuery;
     if (!currentQuery) { $('searchMeta').textContent = 'Search in Hindi, English or reviewed Romanized names, including objects below the horizon.'; return; }
     $('searchMeta').textContent = `${items.length}${items.length === 50 ? '+' : ''} result${items.length === 1 ? '' : 's'} for “${currentQuery}”`;
-    renderList($('searchList'), items, 'No object in this catalog matches. Try a planet, star name or Messier number.');
+    renderList($('searchList'), items, 'No object in this catalog matches. Try a planet, constellation, star name or Messier number.');
   }
   $('objectSearch').addEventListener('input', () => {
     currentQuery = $('objectSearch').value.trim();
@@ -314,13 +323,48 @@ export function createUI(handlers = {}) {
     const age = Number.isFinite(meta?.oldestAgeDays) ? ` · oldest elements ${meta.oldestAgeDays.toFixed(1)} days` : '';
     const updated = meta?.fetchedAt ? new Date(meta.fetchedAt) : null;
     const fetched = updated && Number.isFinite(updated.getTime()) ? ` · retrieved ${updated.toISOString().slice(0, 16).replace('T', ' ')} UTC` : '';
-    $('satMeta').textContent = currentState?.layers?.sats === false ? 'Satellites are off.' : meta ? `${meta.count ?? sats.length} elements · ${meta.source || 'unknown source'}${age}${fetched}${meta.stale ? ' · stale data' : ''}${meta.suppressed ? ` · ${meta.suppressed} older elements omitted` : ''}` : 'Loading satellite data…';
+    const off = currentState?.layers?.sats === false;
+    const groups = Array.isArray(meta?.groupsLoaded) ? meta.groupsLoaded.length : Number.isFinite(meta?.groupsLoaded) ? meta.groupsLoaded : null;
+    const scope = meta?.partial ? ` · partial data${groups != null ? ` (${groups} source groups loaded)` : ''}` : '';
+    const cached = meta?.source === 'cache' ? ` · cached data${meta.cacheStale ? ' (retrieved more than two hours ago)' : ''}` : meta?.source === 'snapshot' ? ' · bundled fallback' : '';
+    const attempted = utcStamp(meta?.lastAttemptAt);
+    const check = orbitalCheckStatus(meta);
+    $('satMeta').textContent = meta ? `${off ? 'Layer off · ' : ''}${meta.count ?? sats.length} elements · ${meta.source || 'unknown source'}${cached}${scope}${age}${fetched}${meta.stale ? ' · stale data' : ''}${meta.suppressed ? ` · ${meta.suppressed} older elements omitted` : ''}${attempted ? ` · last online attempt ${attempted}` : ''}${meta.error ? ' · last online check failed; available elements may be incomplete' : ''}${check ? ` · ${check}` : ''}` : off ? 'Satellites are off.' : 'Loading satellite data…';
     renderList($('satList'), sats.slice(0, 12).map(s => ({ ...s, kind:'satellite' })), 'No tracked satellite above the horizon.', d => `${fmtAlt(d.alt)} · az ${finite(d.az)}° · ${finite(d.rangeKm)} km`);
   }
-  function planeList(planes = [], status, timestamp) {
+  function orbitalCheckStatus(meta) {
+    const next = utcStamp(meta?.nextRefreshAt);
+    if (!next) return '';
+    return new Date(meta.nextRefreshAt).getTime() > Date.now() ? `Next online check no earlier than ${next}` : 'Online check is available now';
+  }
+  function trackingStatus() {
+    const state = currentState;
+    if (!state) return;
+    const satellite = !state.layers.sats ? 'Satellites off' : state.tleMeta?.source === 'none' ? 'Satellites: data unavailable' : state.tleMeta?.stale ? 'Satellites: older orbital data' : `Satellites enabled${state.sats ? ` · ${state.sats.length} currently tracked` : ''}`;
+    const aircraft = !state.layers.planes ? 'Aircraft off' : state.selectedTime ? 'Aircraft paused for simulated time' : state.planeStatus === 'location-needed' ? 'Aircraft: choose your location' : state.planeStatus === 'limited' ? 'Aircraft paused: API limit' : state.planeStatus === 'ok' ? `Aircraft: ${state.planes?.length || 0} reports` : `Aircraft: ${state.planeStatus || 'waiting for data'}`;
+    $('toolsFeedStatus').textContent = `${satellite} · ${aircraft}`;
+  }
+  $('refreshSatellites').addEventListener('click', async () => {
+    const control = $('refreshSatellites');
+    control.disabled = true; control.setAttribute('aria-busy', 'true');
+    $('satRefreshStatus').textContent = 'Checking orbital data…';
+    try {
+      const result = await handlers.refreshSatellites?.();
+      const check = orbitalCheckStatus(result?.meta);
+      const message = result?.message || (result?.ok ? 'Orbital data checked.' : 'Orbital data could not be refreshed. Existing data may be stale.');
+      $('satRefreshStatus').textContent = `${message}${result?.meta?.partial ? ' Partial source data is available.' : ''}${check ? ` ${check}.` : ''}`;
+      if (result?.meta) satList(currentState?.sats || [], result.meta);
+      trackingStatus();
+    } catch { $('satRefreshStatus').textContent = 'Orbital data could not be refreshed. Existing data may be stale; try again later.'; }
+    finally { control.disabled = false; control.setAttribute('aria-busy', 'false'); }
+  });
+  function planeList(planes = [], status, timestamp, info = {}) {
     const age = timestamp ? Math.max(0, Math.round((Date.now() - timestamp) / 1000)) : null;
-    $('planeMeta').textContent = status === 'ok' ? `${planes.length} in 50 nautical miles · updated ${age ?? '—'} s ago` : status === 'limited' ? 'Rate-limited. Retrying with a longer interval.' : status === 'error' ? 'Aircraft feed unavailable. Last positions may be stale; retrying.' : status === 'paused' ? 'Aircraft feed paused.' : status === 'simulated' ? 'Aircraft feed is paused during simulated time. Return to now to resume.' : status === 'location-needed' ? 'Set your own location in Settings before enabling aircraft requests.' : 'Aircraft feed is off.';
-    renderList($('planeList'), planes.slice(0, 12).map(p => ({ ...p, kind:'plane' })), status === 'ok' ? 'No aircraft in range.' : 'Enable the optional feed above to request live aircraft.', d => `${d.altFt == null ? 'Altitude unavailable' : `${finite(d.altFt)} ft`} · ${finite(d.distKm)} km ${Number.isFinite(d.az) ? compass16(d.az) : ''}`);
+    const remaining = Number.isFinite(info?.remaining) ? ` · API reports ${info.remaining} requests remaining` : '';
+    const retry = utcStamp(info?.retryAt), retryPending = retry && new Date(info.retryAt).getTime() > Date.now();
+    const limited = `Aircraft polling has stopped at the API limit.${remaining ? ` ${remaining.slice(3)}.` : ''} ${retryPending ? `Wait until ${retry}, then turn the aircraft feed off and on to retry.` : retry ? 'The indicated wait has elapsed. Turn the aircraft feed off and on to retry.' : 'Wait for the API allowance to reset, then turn the aircraft feed off and on to retry.'} Other users on your network may share this allowance.`;
+    $('planeMeta').textContent = status === 'ok' ? `${planes.length} in 50 nautical miles · updated ${age ?? '—'} s ago${remaining}` : status === 'limited' ? limited : status === 'error' ? 'Aircraft feed unavailable. Last positions may be stale; retrying.' : status === 'paused' ? 'Aircraft feed paused.' : status === 'simulated' ? 'Aircraft feed is paused during simulated time. Return to now to resume.' : status === 'location-needed' ? 'Set your own location in Settings before enabling aircraft requests.' : 'Aircraft feed is off.';
+    renderList($('planeList'), planes.slice(0, 12).map(p => ({ ...p, kind:'plane' })), status === 'ok' ? 'No aircraft in range.' : status === 'limited' ? 'No current aircraft positions while polling is paused.' : 'Enable the optional feed above to request live aircraft.', d => `${d.altFt == null ? 'Altitude unavailable' : `${finite(d.altFt)} ft`} · ${finite(d.distKm)} km ${Number.isFinite(d.az) ? compass16(d.az) : ''}`);
   }
   function tonight(t) {
     latestTonight = t;
@@ -357,6 +401,7 @@ export function createUI(handlers = {}) {
     });
     for (const [id, key] of [['setGrid','grid'], ['setLabels','labels'], ['setSats','sats'], ['setPlanes','planes']]) $(id).checked = !!state.layers[key];
     $('setNight').checked = !!state.night;
+    trackingStatus();
     if (state.loc && !['locLat', 'locLon'].includes(document.activeElement?.id)) {
       $('locLat').value = finite(state.loc.lat, 5); $('locLon').value = finite(state.loc.lon, 5);
     }

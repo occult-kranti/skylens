@@ -19,9 +19,11 @@ export async function loadDSOs(url = 'data/dsos.json') {
 
 export function constellationFrame(date, lat, lon, refraction = false) {
   const project = horizontalProjector(date, lat, lon, refraction);
-  return constellations.map(c => {
+  return constellations.map((c, index) => {
     const label = c.label ? project(c.label[0], c.label[1]) : null;
-    return { name: c.name, id: c.id,
+    return { name: c.name, id: `const:${c.id}:${index}`, catalogueId: c.id, kind: 'constellation',
+      alt: label?.alt ?? null, az: label?.az ?? null,
+      description: 'Guidance targets the catalogue label anchor, not a single star or full boundary. Stick figures are illustrative.',
       segs: c.lines.map(seg => seg.map(([ra, dec]) => { const p = project(ra, dec); return [p.alt, p.az]; })),
       label: label && label.alt > -5 ? { ...label, name: c.name } : null };
   });

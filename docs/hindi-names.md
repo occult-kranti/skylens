@@ -4,7 +4,7 @@ Research and implementation date: **2026-10-05 UTC**. This feature changes displ
 
 ## Coverage and default
 
-The default is **bilingual** (`सूर्य · Sun`), with Hindi and English alternatives. The initial curated set covers **11 solar-system objects** (Sun, Moon, eight planets and Pluto) and **42 existing catalogue stars**. Earth/Pluto naming support does not add them to the sky renderer or change their classification. Sun remains a star, Moon a natural satellite, and Pluto a dwarf planet.
+The default is **bilingual** (`सूर्य · Sun`), with Hindi and English alternatives. The curated set covers **11 solar-system objects** (Sun, Moon, eight planets and Pluto), **42 existing catalogue stars**, and **all 88 IAU constellations** represented by 89 local drawing entries. Serpens has separate Caput and Cauda entries. Earth/Pluto naming support does not add them to the sky renderer or change their classification. Sun remains a star, Moon a natural satellite, and Pluto a dwarf planet.
 
 This is **not a Hindi translation of all 1,022 non-Solar catalogue entries**. Unreviewed names and technical identifiers such as `79Zet UMa` and `M31` remain in their original form in every mode. Their detail metadata says the Hindi spelling has not been reviewed. A partial, disclosed name catalogue is preferable to inventing traditional identities or algorithmically mistransliterating hundreds of proper names.
 
@@ -25,6 +25,17 @@ The official English PDF was fetched and read through Exa on 2026-10-05. It supp
 Official Hindi PDF fetch attempts did not yield readable content through the research tool. They are **not counted as verified Hindi editions**. Secondary Hindi NCERT-solution results were useful for discovery, but some contained clear science errors or inconsistent spelling; they were not accepted as authoritative star-alias sources.
 
 Five search calls requested 28 candidate results (8 + 5 + 5 + 5 + 5), followed by targeted primary fetches. This is a bounded source check, not an exhaustive survey of Indian sky-name traditions. URLs/identities were verified against the actual catalogue; no protected textbook artwork or substantive text was copied.
+
+### Constellation extension: primary references
+
+The additional constellation request prompted one further search (five candidate results) and targeted primary fetches on **2026-10-05**:
+
+- **IAU, “The Constellations”**: https://www.iau.org/IAU/IAU/Astronomy-FAQs/Constellations.aspx — full page read, including its 88-name table. It defines constellations as sky regions, distinguishes asterisms from constellations, lists Serpens with Caput and Cauda charts, and spells CrA **Corona Australis**. It explicitly notes that there is no single correct pronunciation. The earlier `/public/themes/constellations/` URL failed to fetch; the current URL above was verified. The IAU source supports international names and identities, **not these editorial Hindi spellings**.
+- **NCERT chapter 12, pp. 234–236**, same official English PDF above, re-read: the Big Dipper/Saptarshi is **within** Ursa Major, Little Dipper within Ursa Minor, and Pleiades/Krittika is a star group in Taurus. These relationships are contextual notes, not whole-constellation search aliases.
+
+The local catalogue contains **89 entries and 88 distinct IAU abbreviations**. `Serpens Caput` and `Serpens Cauda` share `Ser`; they are not counted as two official constellations. `Corona Austrina` is the retained source-catalogue spelling; `Corona Australis` and its Hindi rendering are accepted search alternatives. Canonical `Serpens` and `Corona Australis` inputs also have labels, without adding duplicate sky objects.
+
+All constellation Hindi labels are **editorial transliterations of retained international names**, not translations of mythological figures, official Hindi nomenclature, traditional Indian sky divisions, or equal-width astrological signs. Ursa Major is not renamed Saptarshi; Taurus is not renamed Krittika; Aries is not renamed Mesha. IAU regions and cultural asterisms can coexist without implying that their extents are identical. The app's existing stick figures are identification guides, not official constellation boundaries. No IAU chart art was copied.
 
 ## Naming methods
 
@@ -68,6 +79,10 @@ displayName({ name: 'Sirius', kind: 'star' }, 'hi');
 // 'सीरियस'
 searchNames({ name: 'Polaris', kind: 'star' }, 'dhruv tara');
 // true
+displayName({ name: 'Orion', kind: 'constellation' });
+// 'ओरायन · Orion'
+searchNames({ name: 'Ursa Major', kind: 'constellation' }, 'अर्सा मेजर');
+// true
 objectNameRecord({ name: 'Aldebaran', kind: 'star' });
 // method, methodLabel, traditionalAliases, aliasNote, sourceIds, etc.
 ```
@@ -79,11 +94,11 @@ objectNameRecord({ name: 'Aldebaran', kind: 'star' });
 - `normalizeNameQuery(text)`: Latin diacritics, punctuation, repeated spaces, Hindi joiners/nukta spelling variants and Devanagari digits normalize for search. Hindi vowel signs and virama are preserved.
 - `NAME_SOURCES` / `NAME_DATA_DATE`: provenance metadata. `NAME_COVERAGE` declares the bounded mapped counts.
 
-Names on aircraft, satellites and other unrelated object kinds are not translated merely because their call sign happens to match a star or planet. Unreviewed DSO/catalogue names are preserved.
+Names on aircraft, satellites and other unrelated object kinds are not translated merely because their call sign happens to match a star or planet. A DSO called Andromeda does not inherit the Andromeda constellation label; a star called Orion does not inherit the constellation identity. Unreviewed DSO/catalogue names are preserved.
 
 ## Validation and remaining language work
 
-`node tests/names.mjs` runs nine grouped tests covering every body mapping, bilingual default, Hindi/romanized search, Devanagari normalization, contextual aliases, excluded ambiguous group mappings, stable IDs, wrappers, fallback behavior and exact coverage against the checked-in catalogue. These validate implementation and declared mappings; they do not certify a universal Indian naming standard or native-speaker consensus on every editorial transliteration.
+`node tests/names.mjs` runs **13 grouped tests**, all passing on 2026-10-05, covering every body mapping, bilingual default, Hindi/romanized search, Devanagari normalization, contextual aliases, excluded ambiguous group mappings, stable IDs, wrappers, fallback behavior and exact coverage against the checked-in star/constellation catalogues. The constellation tests compare the 88 unique abbreviations against the reviewed IAU list, exercise every one of the 89 Hindi labels, and check Serpens parts, Corona Australis/Austrina, Boötes/Bootes, cross-kind name collisions and asterism/sign exclusions. These validate implementation and declared mappings; they do not certify a universal Indian naming standard or native-speaker consensus on every editorial transliteration.
 
 Future additions should record the source, whether a name denotes one star or a group/sector, alternative Hindi spelling, reviewer and date. Preserve the original catalogue ID and add aliases rather than changing scientific identity. This feature does not claim that the entire interface, all catalogue names, or all source material is translated into Hindi.
 
@@ -135,3 +150,99 @@ The following table is generated from the implemented catalogue metadata. Except
 | Albireo | अल्बिरियो | Hindi transliteration |
 | Megrez | मेग्रेज़ | Hindi transliteration |
 | Alcor | एल्कोर | Hindi transliteration |
+
+## Constellation spellings
+
+All labels below use the **Hindi transliteration** method. This table lists the 89 source-catalogue entries; the two Serpens rows count as one of the 88 IAU constellations. Traditional aliases are intentionally empty.
+
+| IAU abbreviation | Catalogue label | Editorial Hindi display |
+|---|---|---|
+| And | Andromeda | एंड्रोमेडा |
+| Ant | Antlia | एंट्लिया |
+| Aps | Apus | एपस |
+| Aqr | Aquarius | अक्वेरियस |
+| Aql | Aquila | अक्विला |
+| Ara | Ara | आरा |
+| Ari | Aries | एरीज़ |
+| Aur | Auriga | ऑराइगा |
+| Boo | Boötes | बोओटीज़ |
+| Cae | Caelum | सीलम |
+| Cam | Camelopardalis | कैमेलोपार्डालिस |
+| Cnc | Cancer | कैंसर |
+| CVn | Canes Venatici | केनीज़ वेनैटिसाई |
+| CMa | Canis Major | केनिस मेजर |
+| CMi | Canis Minor | केनिस माइनर |
+| Cap | Capricornus | कैप्रिकॉर्नस |
+| Car | Carina | करीना |
+| Cas | Cassiopeia | कैसिओपिया |
+| Cen | Centaurus | सेंटॉरस |
+| Cep | Cepheus | सीफियस |
+| Cet | Cetus | सीटस |
+| Cha | Chamaeleon | कैमीलियन |
+| Cir | Circinus | सर्सिनस |
+| Col | Columba | कोलंबा |
+| Com | Coma Berenices | कोमा बेरेनाइसीज़ |
+| CrA | Corona Austrina | कोरोना ऑस्ट्रिना |
+| CrB | Corona Borealis | कोरोना बोरिऐलिस |
+| Crv | Corvus | कॉर्वस |
+| Crt | Crater | क्रेटर |
+| Cru | Crux | क्रक्स |
+| Cyg | Cygnus | सिग्नस |
+| Del | Delphinus | डेल्फिनस |
+| Dor | Dorado | डोराडो |
+| Dra | Draco | ड्रेको |
+| Equ | Equuleus | इक्वूलियस |
+| Eri | Eridanus | इरिडेनस |
+| For | Fornax | फ़ॉर्नैक्स |
+| Gem | Gemini | जेमिनी |
+| Gru | Grus | ग्रस |
+| Her | Hercules | हर्क्युलीज़ |
+| Hor | Horologium | होरोलोजियम |
+| Hya | Hydra | हाइड्रा |
+| Hyi | Hydrus | हाइड्रस |
+| Ind | Indus | इंडस |
+| Lac | Lacerta | लसर्टा |
+| Leo | Leo | लियो |
+| LMi | Leo Minor | लियो माइनर |
+| Lep | Lepus | लेपस |
+| Lib | Libra | लीब्रा |
+| Lup | Lupus | लूपस |
+| Lyn | Lynx | लिंक्स |
+| Lyr | Lyra | लाइरा |
+| Men | Mensa | मेंसा |
+| Mic | Microscopium | माइक्रोस्कोपियम |
+| Mon | Monoceros | मोनोसेरस |
+| Mus | Musca | मस्का |
+| Nor | Norma | नॉर्मा |
+| Oct | Octans | ऑक्टैन्स |
+| Oph | Ophiuchus | ओफ़ियूकस |
+| Ori | Orion | ओरायन |
+| Pav | Pavo | पावो |
+| Peg | Pegasus | पेगसस |
+| Per | Perseus | पर्सियस |
+| Phe | Phoenix | फ़ीनिक्स |
+| Pic | Pictor | पिक्टर |
+| Psc | Pisces | पाइसीज़ |
+| PsA | Piscis Austrinus | पाइसिस ऑस्ट्राइनस |
+| Pup | Puppis | पपिस |
+| Pyx | Pyxis | पिक्सिस |
+| Ret | Reticulum | रेटिक्युलम |
+| Sge | Sagitta | सजिटा |
+| Sgr | Sagittarius | सैजिटेरियस |
+| Sco | Scorpius | स्कॉर्पियस |
+| Scl | Sculptor | स्कल्प्टर |
+| Sct | Scutum | स्क्यूटम |
+| Ser | Serpens Caput | सर्पेन्स कैपुट |
+| Ser | Serpens Cauda | सर्पेन्स कॉडा |
+| Sex | Sextans | सेक्स्टैन्स |
+| Tau | Taurus | टॉरस |
+| Tel | Telescopium | टेलिस्कोपियम |
+| Tri | Triangulum | ट्राइऐंग्युलम |
+| TrA | Triangulum Australe | ट्राइऐंग्युलम ऑस्ट्राली |
+| Tuc | Tucana | टुकाना |
+| UMa | Ursa Major | अर्सा मेजर |
+| UMi | Ursa Minor | अर्सा माइनर |
+| Vel | Vela | वीला |
+| Vir | Virgo | वर्गो |
+| Vol | Volans | वोलैन्स |
+| Vul | Vulpecula | वल्पेक्युला |

@@ -43,12 +43,18 @@ try {
   const base = origin + basePath;
   browser = await chromium.launch({ headless: true,
     ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {}) });
-  async function contextFor(viewport, camera = 'denied') {
+  async function contextFor(viewport, camera = 'denied', mockSatelliteFailure = false) {
     const context = await browser.newContext({ viewport, reducedMotion: 'reduce', serviceWorkers: 'block' });
-    const unexpected = [], errors = [], badResponses = [];
+    const unexpected = [], errors = [], badResponses = [], satelliteRequests = [];
+    const isSatelliteRequest = url => url.origin === 'https://celestrak.org' && url.pathname === '/NORAD/elements/gp.php' &&
+      ['stations', 'visual'].includes(url.searchParams.get('GROUP')) && url.searchParams.get('FORMAT') === 'tle';
     await context.route('**/*', route => {
       const url = new URL(route.request().url());
       if (url.origin === origin || ['data:', 'blob:'].includes(url.protocol)) return route.continue();
+      if (mockSatelliteFailure && isSatelliteRequest(url)) {
+        satelliteRequests.push(url.href);
+        return route.fulfill({ status: 503, contentType: 'text/plain', body: 'Deliberately unavailable browser fixture' });
+      }
       unexpected.push(url.href);
       return route.abort('blockedbyclient');
     });
@@ -90,9 +96,10 @@ try {
       console.error('Browser error:', e.message);
     });
     page.on('response', response => {
+      if (mockSatelliteFailure && isSatelliteRequest(new URL(response.url())) && response.status() === 503) return;
       if (response.status() >= 400) badResponses.push(response.status() + ' ' + response.url());
     });
-    return { context, page, check: () => {
+    return { context, page, satelliteRequests, check: () => {
       assert.deepEqual(errors, [], 'no uncaught browser errors');
       assert.deepEqual(badResponses, [], 'all local assets resolve under Pages project path');
       assert.deepEqual(unexpected, [], 'no external requests before optional feed is enabled');
@@ -211,16 +218,30 @@ try {
       assert.equal(await page.locator('#observingView').isVisible(), true, 'observing view is the initial Explore subview');
       assert.equal(await page.locator('#solarView').isHidden(), true, 'solar system does not crowd observing results');
       assert.ok(await page.locator('#toasts .toast').count() <= 1, 'transient messages never stack over controls');
+      await page.locator('#tonightBody').scrollIntoViewIfNeeded();
       await screenshot(page, label, 'observing');
       await page.locator('#exploreSolar').click();
       await page.locator('#orbitView svg').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#observingView').isHidden(), true, 'solar and observing subviews are distinct');
       await reachable(page, '#exploreTonight');
+      await page.locator('#orbitView svg').scrollIntoViewIfNeeded();
       await screenshot(page, label, 'solar');
       await page.locator('#exploreSolar').press('ArrowLeft');
       assert.equal(await page.locator('#exploreTonight').getAttribute('aria-selected'), 'true', 'Explore subviews support arrow-key navigation');
       await tab(page, 'settings');
       await page.locator('#nameMode').selectOption('hi');
+      await findObject(page, 'ओरायन', 'const:Ori:59');
+      await waitText(page, '#infocard h2', 'ओरायन');
+      await waitText(page, '#infocard', 'Anchor altitude / azimuth');
+      await waitText(page, '#infocard', 'anchor');
+      await page.locator('#objectEvents[aria-busy="false"]').waitFor();
+      assert.equal(await page.locator('#objectEvents dt').count(), 0, 'a constellation figure does not invent single-object rise/set events');
+      await page.locator('#infocard').getByRole('button', { name: /^Save object$/ }).click();
+      await page.locator('#infocard h2').scrollIntoViewIfNeeded();
+      await screenshot(page, label, 'hindi-constellation');
+      await findObject(page, 'Orion', 'const:Ori:59');
+      await waitText(page, '#infocard h2', 'ओरायन');
+      assert.equal(await page.locator('#infocard [data-action="save"]').getAttribute('aria-pressed'), 'true', 'English constellation alias retains saved canonical identity');
       await findObject(page, 'मंगल', 'body:Mars');
       await waitText(page, '#infocard h2', 'मंगल');
       const hindiCoordinates = await selectedCoordinates(page);
@@ -256,6 +277,11 @@ try {
       await waitText(page, '#infocard h2', 'मंगल');
       await tab(page, 'tools');
       assert.equal(await page.locator('#panelTools').isVisible(), true, 'Tools is a reachable main destination');
+      await waitText(page, '#toolsTime', 'Simulated · 2026-12-14 22:00:00 UTC');
+      await waitText(page, '#toolsLocation', 'London roof');
+      await waitText(page, '#toolsLocation', '51.500');
+      await waitText(page, '#toolsCalculation', 'Astronomy Engine');
+      await waitText(page, '#toolsFeedStatus', 'Satellites off · Aircraft off');
       assert.equal(await page.locator('#setPlanes').isChecked(), false, 'tools navigation does not enable location-sharing aircraft feed');
       await page.locator('#returnLive').click();
       await page.locator('#simulationBanner').waitFor({ state: 'hidden' });
@@ -264,18 +290,19 @@ try {
       assert.equal(await page.locator('#setFov').inputValue(), '31', 'FOV persisted');
       assert.equal(await page.locator('#setNight').isChecked(), true, 'night preference persisted');
       assert.equal(await page.locator('#nameMode').inputValue(), 'hi', 'Hindi name preference persisted');
-      assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use London roof\b/ }).count(), 1, 'saved location survives reload without duplicate rows');
-      assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use Temporary spot\b/ }).count(), 0, 'location removal persists');
       await waitText(page, '#telPos', '51.500');
       await reachable(page, '#nameMode');
       await screenshot(page, label, 'settings-hindi');
       await tab(page, 'saved');
+      assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use London roof\b/ }).count(), 1, 'saved location survives reload without duplicate rows');
+      assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use Temporary spot\b/ }).count(), 0, 'location removal persists');
       await waitText(page, '#savedList', 'मंगल');
       assert.equal(await page.locator('#savedList [data-object-key="body:Mars"]').count(), 1, 'Hindi favourites retain canonical identity');
+      assert.equal(await page.locator('#savedList [data-object-key="const:Ori:59"]').count(), 1, 'Hindi constellation favourites persist without duplicate identities');
       assert.match(await page.locator('#observationNote').inputValue(), /clear northern horizon/, 'note persisted');
       await layoutCheck(page, label + ' saved');
       check();
-      completed.push(label + ': camera denial/manual, named-location save/use/remove, Hindi/English search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools, responsive controls, Pages base path, no external requests');
+      completed.push(label + ': camera denial/manual, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests');
     } catch (error) {
       browserDiagnostics.push({ label, state: await page.evaluate(() => ({
         focus: document.activeElement?.id, aim: document.querySelector('#telAim')?.textContent,
@@ -283,6 +310,34 @@ try {
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       })).catch(() => null) });
       await page.screenshot({ path: resolve(results, label + '-failure.png'), fullPage: true }).catch(() => {});
+      throw error;
+    } finally { await context.close(); }
+  }
+  // A mocked 503 proves visible feed failure and privacy behavior, not live API availability.
+  {
+    const { context, page, check, satelliteRequests } = await contextFor({ width: 390, height: 844 }, 'denied', true);
+    try {
+      await page.goto(base + '?manual=1&nointro=1&dock=tools', { waitUntil: 'domcontentloaded' });
+      await page.locator('#panelTools').waitFor({ state: 'visible' });
+      await waitText(page, '#toolsTime', 'Live');
+      await waitText(page, '#toolsLocation', 'Demo: New York');
+      assert.equal(satelliteRequests.length, 0, 'opening Tools does not request an external feed');
+      await page.locator('#trafficDetails > summary').click();
+      await reachable(page, '#refreshSatellites');
+      await page.locator('#refreshSatellites').click();
+      await page.locator('#refreshSatellites[aria-busy="false"]').waitFor();
+      await waitText(page, '#satRefreshStatus', 'unavailable');
+      assert.deepEqual(satelliteRequests.map(url => new URL(url).searchParams.get('GROUP')).sort(), ['stations', 'visual'],
+        'explicit refresh only checks the two documented orbital feeds');
+      assert.equal(await page.locator('#setSats').isChecked(), false, 'refreshing does not enable the satellite layer');
+      assert.equal(await page.locator('#setPlanes').isChecked(), false, 'refreshing does not enable aircraft requests');
+      await waitText(page, '#toolsFeedStatus', 'Satellites off · Aircraft off');
+      await page.locator('#satRefreshStatus').scrollIntoViewIfNeeded();
+      await screenshot(page, 'mobile', 'orbital-feed-failure');
+      check();
+      completed.push('explicit orbital refresh: two mocked 503 responses, visible fallback/failure status, no implicit feed enablement or aircraft request; live API availability not tested');
+    } catch (error) {
+      await page.screenshot({ path: resolve(results, 'orbital-feed-failure-diagnostic.png'), fullPage: true }).catch(() => {});
       throw error;
     } finally { await context.close(); }
   }

@@ -49,8 +49,8 @@
       </div>
 
       <section class="panel active" id="panelSky" role="tabpanel" aria-labelledby="tabSky" data-panel="sky">
-        <label for="objectSearch">Find a star, planet or deep-sky object</label>
-        <input id="objectSearch" type="search" placeholder="Try चंद्रमा, Moon, Surya or M31" autocomplete="off" aria-describedby="searchMeta">
+        <label for="objectSearch">Find a star, planet, constellation or deep-sky object</label>
+        <input id="objectSearch" type="search" placeholder="Try चंद्रमा, Orion, Surya or M31" autocomplete="off" aria-describedby="searchMeta">
         <p id="searchMeta" class="meta" role="status">Search in Hindi, English or reviewed Romanized names, including objects below the horizon.</p>
         <ul id="searchList" hidden></ul>
         <div id="skyListGroup"><h2 class="sect">Bright objects above the horizon</h2><ul id="skyList"><li class="empty">Loading the sky catalog…</li></ul></div>
@@ -88,6 +88,12 @@
 
       <section class="panel" id="panelTools" role="tabpanel" aria-labelledby="tabTools" data-panel="tools" hidden>
         <h2>Charts, calendars &amp; tools</h2>
+        <section class="tracking-context" aria-labelledby="trackingHeading">
+          <h3 id="trackingHeading">Your tracking context</h3>
+          <dl class="grid"><dt>Sky time</dt><dd id="toolsTime">Loading current UTC…</dd><dt>Observer</dt><dd id="toolsLocation">Demo: New York</dd><dt>Calculated here</dt><dd id="toolsCalculation">Stars, planets and constellation figures · local catalogs and Astronomy Engine</dd><dt>External feeds</dt><dd id="toolsFeedStatus">Satellites off · Aircraft off</dd></dl>
+          <p class="meta">The sky and observing tools use the selected time and location. Satellite elements and aircraft reports have their own update times. These overlays are not visual recognition or a complete catalog of everything overhead.</p>
+        </section>
+        <h3 class="sect">Related calculators</h3>
         <p class="help">Continue in the Astrologer's Workbench. These links open related calculators; your saved sky inputs are not sent with them.</p>
         <nav class="tool-links" aria-label="Workbench calculators">
           <a href="https://occult-kranti.github.io/astrology-sim-ant/pages/book3/nativity.html"><span>Natal chart</span><small>Birth chart inputs, planetary positions and houses</small></a>
@@ -102,8 +108,12 @@
         <div class="setrow"><label for="setSats">Show satellites</label><input type="checkbox" id="setSats" aria-describedby="satHelp"></div>
         <p id="satHelp" class="help">Uses CelesTrak orbital elements or a dated bundled snapshot. A calculated position does not imply a satellite is illuminated or visible.</p>
         <p class="meta" id="satMeta">Satellites are off.</p><ul id="satList"></ul>
+        <button id="refreshSatellites" type="button" aria-describedby="satRefreshPolicy satRefreshStatus">Check orbital data</button>
+        <p id="satRefreshPolicy" class="help">Online orbital-data checks are spaced at least two hours apart. Until the next check is due, this action uses the available cache. Checking does not turn the satellite layer on.</p>
+        <p id="satRefreshStatus" class="meta" role="status">The source, element age and next available check appear below each check.</p>
         <div class="setrow"><label for="setPlanes">Enable aircraft feed</label><input type="checkbox" id="setPlanes" aria-describedby="aircraftPrivacy"></div>
         <p id="aircraftPrivacy" class="help">Enabling sends your selected latitude and longitude, rounded to 3 decimal places, to AvioADSB about every 12 seconds while this page is visible and the feed is enabled, including when you open another panel. Requests pause during simulated time and require a location you selected. No camera frames are sent. Community data is not for navigation.</p>
+        <p class="help">No account is required. AvioADSB allows anonymous access at one request per 10 seconds and 100 requests per day, shared with other users on your network. A full daily allowance lasts about 20 minutes at this app's 12-second interval. Polling stops when the API reports a limit; wait for the indicated time, then turn this feed off and on to retry.</p>
         <p class="meta" id="planeMeta">Aircraft feed is off.</p><ul id="planeList"></ul>
         <div class="feeds" aria-label="Feed status"><span class="f"><span class="dot st-off" id="dotTle" aria-hidden="true"></span><span id="tleStatus">TLE: off</span></span><span class="f"><span class="dot st-off" id="dotAdsb" aria-hidden="true"></span><span id="adsbStatus">Aircraft: off</span></span></div>
         </details>
