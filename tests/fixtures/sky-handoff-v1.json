@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "cases": [
+    { "dateISO": "2026-10-05T12:34:56.000Z", "lat": 28.6139, "lon": 77.209, "mode": "current", "locationSource": "selected", "object": { "id": "body:Moon", "name": "Moon", "kind": "moon" }, "names": "hi" },
+    { "dateISO": "2026-11-01T06:30:00.000Z", "lat": 40.7128, "lon": -74.006, "mode": "simulated", "locationSource": "selected", "object": { "id": "star:1", "name": "Sirius", "kind": "star" }, "names": "bilingual" },
+    { "dateISO": "2026-10-05T00:00:00.000Z", "lat": -13.8333, "lon": -171.75, "mode": "simulated", "locationSource": "selected", "object": { "id": "const:Ser:75", "name": "Serpens Caput", "kind": "constellation" }, "names": "en" },
+    { "dateISO": "2026-10-05T00:00:00.000Z", "lat": -13.8333, "lon": -171.75, "mode": "simulated", "locationSource": "selected", "object": { "id": "const:Ser:76", "name": "Serpens Cauda", "kind": "constellation" }, "names": "hi" },
+    { "dateISO": "1900-01-01T00:00:00.000Z", "lat": 0, "lon": 0, "mode": "simulated", "locationSource": "demo", "object": null, "names": "bilingual" },
+    { "dateISO": "2100-12-31T23:59:59.000Z", "lat": 90, "lon": 180, "mode": "simulated", "locationSource": "selected", "object": null, "names": "en" }
+  ]
+}

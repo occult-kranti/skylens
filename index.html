@@ -60,6 +60,7 @@
       </div>
 
       <section class="panel active" id="panelSky" role="tabpanel" aria-labelledby="tabSky" data-panel="sky">
+        <p id="skyHandoffStatus" class="help" role="status" hidden></p>
         <label for="objectSearch">Find a star, planet, constellation or deep-sky object</label>
         <input id="objectSearch" type="search" placeholder="Try चंद्रमा, Orion, Surya or M31" autocomplete="off" aria-describedby="searchMeta">
         <p id="searchMeta" class="meta" role="status">Search in Hindi, English or reviewed Romanized names, including objects below the horizon.</p>
@@ -103,6 +104,12 @@
           <h3 id="trackingHeading">Your tracking context</h3>
           <dl class="grid"><dt>Sky time</dt><dd id="toolsTime">Loading current UTC…</dd><dt>Observer</dt><dd id="toolsLocation">Demo: New York</dd><dt>Calculated here</dt><dd id="toolsCalculation">Stars, planets and constellation figures · local catalogs and Astronomy Engine</dd><dt>External feeds</dt><dd id="toolsFeedStatus">Satellites off · Aircraft off</dd></dl>
           <p class="meta">The sky and observing tools use the selected time and location. Satellite elements and aircraft reports have their own update times. These overlays are not visual recognition or a complete catalog of everything overhead.</p>
+        </section>
+        <section class="tracking-context" aria-labelledby="castSkyHeading">
+          <h3 id="castSkyHeading">Continue this observing session</h3>
+          <p id="castSkyPrivacy" class="help">Capture the selected sky time and coordinates in Studio for charts, comparison, symbols and a journal. The link keeps coordinates in browser history; it carries no camera frames, permissions, notes or birth data. The destination opens a frozen moment.</p>
+          <button id="castSkyMoment" type="button" aria-describedby="castSkyPrivacy">Cast this sky moment</button>
+          <p class="meta">To include a star, planet or constellation, open its details and choose Cast this observation. A constellation remains an observed figure, not an astrological sign or planet.</p>
         </section>
         <h3 class="sect">Related calculators</h3>
         <p class="help">Continue in the Astrologer's Workbench. These links open related calculators; your saved sky inputs are not sent with them.</p>
