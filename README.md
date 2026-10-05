@@ -38,7 +38,7 @@ Catalogue star coordinates are J2000 rotated with precession/nutation; proper-mo
 
 ## Hindi names and mobile observing
 
-Settings → Object names offers हिन्दी + English (default), हिन्दी, or English. Search accepts English, Hindi and reviewed Romanized aliases. Hindi planet names and 42 curated star labels are available; names outside that curated set keep their original catalogue spelling. Traditional aliases and transliterations are identified in object details. See [the naming sources](docs/hindi-names.md).
+Use the Sky **Show Hindi / Hide Hindi** button to show or hide Hindi labels directly. The choice is remembered and stays in sync with Settings. Settings → Object names offers हिन्दी + English (default), हिन्दी, or English. Search accepts English, Hindi and reviewed Romanized aliases. Hindi planet names and 42 curated star labels are available; names outside that curated set keep their original catalogue spelling. Traditional aliases and transliterations are identified in object details. See [the naming sources](docs/hindi-names.md).
 
 Explore separates Tonight and Solar system views. Select a supported object for next rise/set/upper-transit times at the selected UTC instant/location. Settings can save up to 12 named observing locations; Saved reuses/removes them. Tools opens the existing Workbench calculators and optional live-feed controls. The [October 5 milestone](docs/2026-10-05-hindi-mobile.md) records implementation and verification; first-time Pages administration remains a separate publishing gate.
 

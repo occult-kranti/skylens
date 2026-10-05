@@ -74,7 +74,9 @@ body.camera-on #backdrop { display: none; }
   background: rgba(5,6,8,.86); border-radius: 4px; font-size: 11px; line-height: 1.45;
   color: var(--text-2); overflow-wrap: anywhere;
 }
-#sensorStatus { margin-top: 3px; max-width: 480px; }
+.sensor-controls { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+#sensorStatus { flex: 1; min-width: 0; margin: 0; max-width: 480px; }
+#toggleHindiNames { flex: 0 0 auto; min-height: 36px; padding: 6px 10px; font-size: 12px; white-space: nowrap; }
 #viewControls[data-camera="error"] #cameraStatus { color: var(--warn); }
 #simulationBanner {
   max-width: 540px; margin-top: 8px; padding: 5px 8px; display: flex; gap: 10px;
@@ -257,14 +259,14 @@ input[type="checkbox"] { width: 24px; height: 24px; min-height: 24px; accent-col
 }
 @media (max-width: 559px) and (max-height: 700px) {
   /* Keep the camera actions and Return to now reachable above the short dock. */
-  .panel { max-height: max(100px, calc(100dvh - 300px)); }
+  .panel { max-height: max(100px, calc(100dvh - 316px)); }
   #app:has(#simulationBanner:not([hidden])) .panel { max-height: max(100px, calc(100dvh - 400px)); }
 }
 @media (max-height: 540px) and (min-width: 560px) {
   #viewControls { top: calc(74px + env(safe-area-inset-top)); max-width: 48%; }
   #dock { width: 48%; left: auto; right: 8px; transform: none; }
   .panel { max-height: calc(100dvh - 120px); }
-  #infocard { left: 8px; transform: none; width: 48%; max-height: 54vh; bottom: 8px; }
+  #infocard { left: 8px; transform: none; width: 48%; max-height: min(54vh, calc(100dvh - 198px)); bottom: 8px; }
   #sensorStatus { max-width: 100%; }
   #simulationBanner { flex-wrap: wrap; }
   .actionrow { flex-wrap: wrap; }

@@ -170,6 +170,49 @@ try {
       const before = await page.locator('#telAim').textContent();
       await page.keyboard.press('ArrowRight');
       await page.waitForFunction(before => document.querySelector('#telAim')?.textContent !== before, before);
+      await reachable(page, '#toggleHindiNames');
+      assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-label'), 'Hindi names: Hide Hindi');
+      assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-pressed'), 'true', 'direct Hindi control reflects the default bilingual view');
+      assert.equal(await page.locator('#dockContent').isHidden(), true, 'Hindi visibility can change without opening tools');
+      await page.locator('#toggleHindiNames').click();
+      assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-pressed'), 'false');
+      assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-label'), 'Hindi names: Show Hindi');
+      assert.equal(await page.locator('#nameMode').inputValue(), 'en', 'direct hide synchronizes the Settings selector');
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('skylens.preferences.v2')).nameMode), 'en', 'direct hide persists the shared preference');
+      await findObject(page, 'मंगल', 'body:Mars');
+      await waitText(page, '#infocard h2', 'Mars');
+      assert.equal(await page.locator('#infocard h2 [lang="hi"]').count(), 0, 'hidden Hindi names are absent from the selected-object heading');
+      await page.goto(base + '?manual=1&nointro=1', { waitUntil: 'domcontentloaded' });
+      await page.locator('#toggleHindiNames[aria-pressed="false"]').waitFor();
+      assert.equal(await page.locator('#nameMode').inputValue(), 'en', 'direct hide survives reload');
+      await waitText(page, '#toggleHindiNames', 'Show Hindi');
+      await reachable(page, '#toggleHindiNames');
+      await screenshot(page, label, 'sky-hindi-toggle');
+      await page.locator('#toggleHindiNames').click();
+      assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-pressed'), 'true');
+      assert.equal(await page.locator('#nameMode').inputValue(), 'bilingual', 'direct show restores Hindi and English together');
+      await findObject(page, 'Mars', 'body:Mars');
+      await waitText(page, '#infocard h2', 'मंगल');
+      await waitText(page, '#infocard h2', 'Mars');
+      assert.equal(await page.locator('#infocard h2 [lang="hi"]').count(), 1, 'direct show restores the annotated Hindi name');
+      await findObject(page, 'Polaris', 'star:48');
+      await waitText(page, '#infocard h2', 'ध्रुव तारा');
+      assert.equal(await page.locator('#infocard .hindi-aliases').isVisible(), true, 'Hindi aliases are available when enabled');
+      await page.locator('#objectEvents[aria-busy="false"]').waitFor();
+      const polarisEvents = await page.locator('#objectEvents').elementHandle();
+      const polarisCoordinates = await selectedCoordinates(page);
+      await reachable(page, '#toggleHindiNames');
+      await page.locator('#toggleHindiNames').click();
+      await waitText(page, '#infocard h2', 'Polaris');
+      assert.equal(await page.locator('#infocard h2 [lang="hi"]').count(), 0);
+      assert.equal(await page.locator('#infocard .hindi-aliases').isHidden(), true, 'direct hide also hides Hindi traditional aliases in the open detail card');
+      assert.equal(await selectedCoordinates(page), polarisCoordinates, 'changing name visibility preserves the selected coordinates');
+      assert.equal(await polarisEvents.evaluate(node => node === document.querySelector('#objectEvents')), true, 'changing name visibility preserves calculated event content');
+      await page.locator('#toggleHindiNames').click();
+      await waitText(page, '#infocard h2', 'ध्रुव तारा');
+      assert.equal(await page.locator('#infocard .hindi-aliases').isVisible(), true, 'direct show restores aliases in the same card');
+      await polarisEvents.dispose();
+      await page.locator('#infocard').getByRole('button', { name: 'Close object details', exact: true }).click();
       await tab(page, 'settings');
       await page.locator('#locGps').click();
       await page.waitForFunction(() => window.__capabilityTest.geoCalls === 1);
@@ -230,6 +273,7 @@ try {
       assert.equal(await page.locator('#exploreTonight').getAttribute('aria-selected'), 'true', 'Explore subviews support arrow-key navigation');
       await tab(page, 'settings');
       await page.locator('#nameMode').selectOption('hi');
+      assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-pressed'), 'true', 'Hindi-only Settings selection synchronizes the direct control');
       await findObject(page, 'ओरायन', 'const:Ori:59');
       await waitText(page, '#infocard h2', 'ओरायन');
       await waitText(page, '#infocard', 'Anchor altitude / azimuth');
@@ -268,6 +312,7 @@ try {
       assert.equal(await page.evaluate(() => document.activeElement?.dataset.objectKey), 'body:Mars', 'closing details restores focus to its current result');
       await tab(page, 'settings');
       await page.locator('#nameMode').selectOption('en');
+      assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-pressed'), 'false', 'English Settings selection synchronizes the direct control');
       await findObject(page, 'मंगल', 'body:Mars');
       await waitText(page, '#infocard h2', 'Mars');
       assert.equal(await selectedCoordinates(page), hindiCoordinates, 'language changes preserve fixed-time astronomical coordinates');
@@ -290,6 +335,7 @@ try {
       assert.equal(await page.locator('#setFov').inputValue(), '31', 'FOV persisted');
       assert.equal(await page.locator('#setNight').isChecked(), true, 'night preference persisted');
       assert.equal(await page.locator('#nameMode').inputValue(), 'hi', 'Hindi name preference persisted');
+      assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-pressed'), 'true', 'direct control restores persisted Hindi-only state');
       await waitText(page, '#telPos', '51.500');
       await reachable(page, '#nameMode');
       await screenshot(page, label, 'settings-hindi');
@@ -302,7 +348,7 @@ try {
       assert.match(await page.locator('#observationNote').inputValue(), /clear northern horizon/, 'note persisted');
       await layoutCheck(page, label + ' saved');
       check();
-      completed.push(label + ': camera denial/manual, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests');
+      completed.push(label + ': camera denial/manual, direct Sky Hindi show/hide with Settings synchronization and reload, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests');
     } catch (error) {
       browserDiagnostics.push({ label, state: await page.evaluate(() => ({
         focus: document.activeElement?.id, aim: document.querySelector('#telAim')?.textContent,
