@@ -310,6 +310,9 @@ export function createApplication() {
   function refreshSky(force = false) {
     if (document.hidden) return;
     const date = dateNow();
+    // Expire moving reports between polls as well as at receipt (1 Hz UI cadence).
+    const receivedNow = Date.now();
+    state.planes = state.planes.filter(p => Number.isFinite(p.positionAt) && receivedNow - p.positionAt <= 60000);
     snapshot = cache.get(date, state.loc, state, force); state.bodies = snapshot.bodies;
     if (state.layers.sats && satelliteReady) {
       try {

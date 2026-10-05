@@ -1,3 +1,15 @@
+# Hindi names, mobile observing and tracking — 2026-10-05
+
+- Default Hindi + English naming, optional Hindi/English modes, mixed-script search, 42 named stars and all 88 IAU constellations (89 catalogue parts). Original IDs and astronomical positions remain language-independent.
+- Search/save/guide to constellation drawing anchors; separate anchors correct inherited Serpens Caput/Cauda duplication. The HYG solar-origin row is excluded without shifting saved-star IDs.
+- Selected-object next rise/set/transit for Sun, Moon, planets and named catalogue stars, with UTC/location snapshots and independent USNO reference checks.
+- Mobile Explore splits Tonight and Solar system; Tools links the existing Workbench and explains local calculations versus optional feeds. Save, reuse and remove up to 12 named observing locations. Mixed-script orbit labels reserve markers/scale labels and use leaders.
+- Satellite status discloses source, partial groups, fetch time, epochs and retry time; two-hour attempts/caches survive reload, errors stop remaining requests and cancellation prevents late writes.
+- Aircraft uses truthful combined position age, expires stale reports, separates receipt/provider/position timestamps and stops at quota. No private key, paid account or new data recipient was added.
+- README includes concrete Pages administrator, device, Hindi/accessibility and optional provider-account actions. [API delivery](tracking-apis.md) has actual Chromium evidence and explicitly bounded coverage.
+
+Calculation engines remain Astronomy Engine 2.1.19 and satellite.js 4.1.4. Sky projection is sensor-based; physical-phone and screen-reader validation remain pending. Current CI/merge/publication evidence is linked from [PR #6](https://github.com/occult-kranti/skylens/pull/6); Pages first-time administrator setup is a separate unresolved gate.
+
 # Camera-first release — 0.3.0
 
 - Persistent Enable/Cancel/Stop/Retry camera; direct gesture motion permission; cleanup on pagehide/background/revocation; explicit manual fallback.

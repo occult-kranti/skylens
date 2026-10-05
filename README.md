@@ -56,3 +56,5 @@ This list distinguishes required setup from optional expansion. No account or AP
 **Satellite setup:** CelesTrak stations/visual orbital elements need no API key. Data is checked no more often than every two hours; old elements are suppressed by the documented seven-day policy, and retrieval time is separate from element epoch. Tools → Optional satellites & aircraft exposes controls, status and manual checking. These feeds do not track every satellite or every aircraft.
 
 **Constellation names:** all 88 IAU constellations (89 catalogue figure entries because Serpens has two parts) now have Hindi transliterations, English aliases and search. Details explain that guidance points to a label anchor, not a physical star or official boundary. Saptarshi, Pleiades and zodiac sectors are not silently treated as equivalent whole constellations.
+
+Source, licensing, quota and actual browser-delivery evidence: [tracking APIs](docs/tracking-apis.md). The public feeds were browser-readable in the dated release diagnostic; this is not a promise of uninterrupted service or complete coverage.

@@ -193,6 +193,22 @@ test('stale or malformed aircraft payloads never become fresh on receipt', async
   } finally { globalThis.fetch = oldFetch; }
 });
 
+test('aircraft position freshness combines payload delay with per-position age', async () => {
+  const oldFetch = globalThis.fetch, providerAt = Date.now() - 55000;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ now: providerAt, ac: [
+    { lat: 40.1, lon: -74, alt_baro: 35000, hex: '115-seconds', seen_pos: 60 },
+    { lat: 40.1, lon: -74, alt_baro: 35000, hex: '56-seconds', seen_pos: 1 },
+  ] }) });
+  let received;
+  const poller = startPlanes(() => ({ lat: 40, lon: -74 }), value => { received = value; });
+  try {
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(received.status, 'ok'); assert.equal(received.planes.length, 1);
+    assert.equal(received.planes[0].id, 'plane:56-seconds');
+    assert.equal(received.planes[0].positionAt, providerAt - 1000);
+  } finally { poller.stop(); globalThis.fetch = oldFetch; }
+});
+
 test('aircraft quota metadata uses reset durations and pauses instead of retrying a daily limit', async () => {
   const now = Date.parse('2026-10-05T12:00:00Z');
   assert.equal(retryAfterTime('60', now), now + 60000);

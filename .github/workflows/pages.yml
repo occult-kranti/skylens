@@ -37,12 +37,6 @@ jobs:
         # Phones ship Indic fallback fonts; the minimal Linux runner needs one.
         # This is test-only and adds no external font request to the application.
         run: sudo apt-get install -y fonts-noto-core
-      - name: Observe public tracking API availability once
-        # Temporary release diagnostic; the report is not a deterministic test gate.
-        # Each provider receives one request using public example coordinates.
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        run: node tests/live-feeds.mjs --browser
       - name: Browser journeys under the Pages project path
         run: node tests/browser.mjs
       - name: Keep browser verification evidence

@@ -4,10 +4,29 @@ import { horizontalProjector } from './sky.js';
 let constellations = [], dsos = [];
 export const counts = () => ({ constellations: constellations.length, dsos: dsos.length });
 
+const isSerpensPart = c => c.id === 'Ser' && ['Serpens Caput', 'Serpens Cauda'].includes(c.name);
+
+// The source repeats one label coordinate for both disconnected Serpens drawings.
+// Each part instead uses the direction of the unweighted mean of its unique J2000
+// line-vertex unit vectors. These are drawing anchors, not official IAU centres,
+// area centroids, or additional constellations. RA hours are normalized to [0, 24).
+export function constellationLabelAnchor(c) {
+  if (!isSerpensPart(c)) return c.label;
+  const unique = new Map(c.lines.flat().map(vertex => [vertex.join(','), vertex]));
+  let x = 0, y = 0, z = 0;
+  for (const [ra, dec] of unique.values()) {
+    const a = ra * Math.PI / 12, d = dec * Math.PI / 180;
+    x += Math.cos(d) * Math.cos(a); y += Math.cos(d) * Math.sin(a); z += Math.sin(d);
+  }
+  if (!unique.size || Math.hypot(x, y, z) < 1e-12) return c.label;
+  return [((Math.atan2(y, x) * 12 / Math.PI) % 24 + 24) % 24,
+    Math.atan2(z, Math.hypot(x, y)) * 180 / Math.PI];
+}
+
 export async function loadConstellations(url = 'data/constellations.json') {
   const r = await fetch(url);
   if (!r.ok) throw new Error('constellations.json ' + r.status);
-  constellations = await r.json();
+  constellations = (await r.json()).map(c => ({ ...c, label: constellationLabelAnchor(c) }));
   return constellations.length;
 }
 export async function loadDSOs(url = 'data/dsos.json') {
@@ -23,7 +42,8 @@ export function constellationFrame(date, lat, lon, refraction = false) {
     const label = c.label ? project(c.label[0], c.label[1]) : null;
     return { name: c.name, id: `const:${c.id}:${index}`, catalogueId: c.id, kind: 'constellation',
       alt: label?.alt ?? null, az: label?.az ?? null,
-      description: 'Guidance targets the catalogue label anchor, not a single star or full boundary. Stick figures are illustrative.',
+      description: isSerpensPart(c) ? 'Guidance targets this part’s drawing anchor, the mean direction of its unique line vertices, not an official centre or boundary. Caput and Cauda are parts of one IAU constellation, Serpens.' :
+        'Guidance targets the catalogue label anchor, not a single star or full boundary. Stick figures are illustrative.',
       segs: c.lines.map(seg => seg.map(([ra, dec]) => { const p = project(ra, dec); return [p.alt, p.az]; })),
       label: label && label.alt > -5 ? { ...label, name: c.name } : null };
   });

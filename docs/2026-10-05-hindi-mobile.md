@@ -12,7 +12,7 @@ Next roadmap objectives: a focused selected-object observing screen with real ne
 
 | ID / priority | Owner and files | Expected behavior / approach | Verification | Status |
 |---|---|---|---|---|
-| H1 P1 | Research agent; names.js, names tests/docs | Source-backed Hindi planet/star names, romanized aliases, bilingual/en/hi formatting; stable English IDs and no invented asterism equivalence | Mapping/source review, Unicode search tests, fallback cases | Implemented; 9 naming groups passed |
+| H1 P1 | Research agent; names.js, names tests/docs | Source-backed Hindi planet/star names, romanized aliases, bilingual/en/hi formatting; stable English IDs and no invented asterism equivalence | Mapping/source review, Unicode search tests, fallback cases | Implemented; 13 naming groups passed |
 | H2 P1 | Lead; main/sky/render/orbits | Shared naming mode applied to labels, search, guidance and solar system; cached calculation IDs remain unchanged | Existing Node suite + language persistence/browser journey | Implemented; local checks passed; real browser gate pending |
 | M1 P1 | UX agent; index/ui/css | Readable 320/390px portrait and 844px landscape, restrained overlays, touch controls, explicit Explore sections and real chart/calendar links | One batched mobile/desktop screenshot pass, one repair confirmation | Implemented; local checks passed; real browser gate pending |
 | O1 P1 | Astronomy agent; observing.js + tests | Selected object's next rise/set/upper transit for selected UTC/location; no-event/polar states and methods shown | Independent/reference geometry, body/stellar and invalid-input cases | Implemented; local checks passed; real browser gate pending |
@@ -25,19 +25,19 @@ The previous SkyLens release could not create its first Pages site because GitHu
 
 ## Integrated implementation evidence
 
-Remote mains were rechecked on 2026-10-05: SkyLens4e91d53e and Workbench1f40e697 had no changes since the prior release. Workbench remains live; SkyLens still returns not found and its latest deploy failed first-time Pages creation. This task modifies only SkyLens.
+Remote mains were rechecked on 2026-10-05: SkyLens 4e91d53e and Workbench 1f40e697 had no changes since the prior release. Workbench remains live; SkyLens still returns not found and its latest deploy failed first-time Pages creation. This task modifies only SkyLens.
 
 Implemented name coverage: 11 solar-system naming records (Earth used in the orbit view; Pluto metadata does not add a rendered object), 42 named catalogue stars, and reviewed Dhruva/Rohini/Ardra aliases. Other catalogue names remain English. Scientific object IDs and positions are independent of display mode. Source notes and editorial transliteration boundaries are in hindi-names.md.
 
-New screens: Explore has separate Tonight/Solar system tabs; Tools links actual existing chart/calendar pages and folds optional feeds; selected objects show a UTC/location snapshot and bounded next events; Saved manages up to12 named locations plus existing favorites/notes. Narrow layouts stack bilingual names and metadata and wrap forms.
+New screens: Explore has separate Tonight/Solar system tabs; Tools links actual existing chart/calendar pages and folds optional feeds; selected objects show a UTC/location snapshot and bounded next events; Saved manages up to 12 named locations plus existing favorites/notes. Narrow layouts stack bilingual names and metadata and wrap forms.
 
-Full local `npm test` passed: 36 original cases, independent ephemeris/event fixtures, 26 camera cases, 13 integration cases, 9 naming groups and 14 observing cases. Node syntax, HTML ID/ARIA linkage and git whitespace checks passed. Independent review repaired a minute-cache boundary error and unavailable-event wording; see2026-10-05-review.md. The fixed HYG Sol origin row is excluded at load after IDs are assigned, preserving all existing saved-star IDs.
+Full local `npm test` passed: 36 original cases, independent ephemeris/event fixtures, 26 camera cases, 17 integration cases, 13 naming groups, 14 observing cases, 11 tracking cases and 14 offline feed-parser assertions. Node syntax, HTML ID/ARIA linkage and git whitespace checks passed. Independent review repaired a minute-cache boundary error and unavailable-event wording; see 2026-10-05-review.md. The fixed HYG Sol origin row is excluded at load after IDs are assigned, preserving all existing saved-star IDs.
 
-Runtime evidence is not yet claimed here. Local HTTP binding still fails EPERM, so mandatory Chromium CI journeys run beneath /skylens/ at320×568,390×844,844×390 and1365×900. CI installs a Devanagari fallback font for the Linux test runner only; the application uses local system fonts and makes no font-CDN request. Physical phone alignment and screen-reader checks remain pending.
+Runtime evidence is not yet claimed here. Local HTTP binding still fails EPERM, so mandatory Chromium CI journeys run beneath /skylens/ at 320×568, 390×844, 844×390 and 1365×900. CI installs a Devanagari fallback font for the Linux test runner only; the application uses local system fonts and makes no font-CDN request. Physical phone alignment and screen-reader checks remain pending.
 
 ## Accepted scope additions during implementation
 
-The user additionally requested API tracking, a README human-action/account checklist, and constellations. Names now include88 IAUidentities/89figure entries. Constellations enter search, saved objects and guidance with stable `const:` IDs and an explicit catalogue-anchor convention; no rise/set time is invented for an extended constellation. Enabled satellite/aircraft feeds join search; satellites use stable NORAD IDs and remain filtered by orbital epoch age.
+The user additionally requested API tracking, a README human-action/account checklist, and constellations. Names now include 88 IAU identities / 89 figure entries. Constellations enter search, saved objects and guidance with stable `const:` IDs and an explicit catalogue-anchor convention; no rise/set time is invented for an extended constellation. Enabled satellite/aircraft feeds join search; satellites use stable NORAD IDs and remain filtered by orbital epoch age.
 
 Tools identifies local calculations versus public APIs and shows the selected time/location. CelesTrak checks respect a two-hour interval and retain truthful fallback timestamps; aircraft requests stop at known quota. The current default scope is existing satellites plus aircraft, with no mandatory paid API or account. A dated, one-request-per-provider real-browser diagnostic records API/CORS availability independently of mocked failure tests. Full coverage of all orbiting objects/aircraft is not claimed.
 

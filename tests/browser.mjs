@@ -326,16 +326,21 @@ try {
       await reachable(page, '#refreshSatellites');
       await page.locator('#refreshSatellites').click();
       await page.locator('#refreshSatellites[aria-busy="false"]').waitFor();
-      await waitText(page, '#satRefreshStatus', 'unavailable');
-      assert.deepEqual(satelliteRequests.map(url => new URL(url).searchParams.get('GROUP')).sort(), ['stations', 'visual'],
-        'explicit refresh only checks the two documented orbital feeds');
+      await waitText(page, '#satRefreshStatus', 'Live orbital data could not be fully refreshed. Previously retrieved or bundled records may remain; old elements are hidden.');
+      await waitText(page, '#satRefreshStatus', 'Next online check no earlier than');
+      assert.deepEqual(satelliteRequests.map(url => new URL(url).searchParams.get('GROUP')), ['stations'],
+        'the first upstream failure stops the remaining orbital group request');
+      await page.locator('#refreshSatellites').click();
+      await page.locator('#refreshSatellites[aria-busy="false"]').waitFor();
+      await waitText(page, '#satRefreshStatus', 'Live orbital data could not be fully refreshed.');
+      assert.equal(satelliteRequests.length, 1, 'repeated checks within the two-hour window reuse fallback metadata without another upstream request');
       assert.equal(await page.locator('#setSats').isChecked(), false, 'refreshing does not enable the satellite layer');
       assert.equal(await page.locator('#setPlanes').isChecked(), false, 'refreshing does not enable aircraft requests');
       await waitText(page, '#toolsFeedStatus', 'Satellites off · Aircraft off');
       await page.locator('#satRefreshStatus').scrollIntoViewIfNeeded();
       await screenshot(page, 'mobile', 'orbital-feed-failure');
       check();
-      completed.push('explicit orbital refresh: two mocked 503 responses, visible fallback/failure status, no implicit feed enablement or aircraft request; live API availability not tested');
+      completed.push('explicit orbital refresh: one mocked 503 stops further requests, repeated check honors two-hour window, visible fallback/failure status, no implicit feed enablement or aircraft request; live API availability not tested');
     } catch (error) {
       await page.screenshot({ path: resolve(results, 'orbital-feed-failure-diagnostic.png'), fullPage: true }).catch(() => {});
       throw error;

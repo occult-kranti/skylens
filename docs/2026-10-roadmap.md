@@ -50,3 +50,7 @@ Image recognition/plate solving (P3), weather service (P3), telescope hardware (
 ## Implementation checkpoint
 
 R1–U1 implementation is complete with local test evidence in VERIFICATION.md, camera-methods.md and performance.md. All feasible central camera, search/time/saved, observing/simulation, chart-input and supported calendar work was integrated. Related workbench details live in its docs/2026-10-roadmap.md. Review pass2 repaired material scientific/lifecycle findings. Final browser CI passed at 06f51fc2 and all four screenshots were inspected. PR #5 merged as 5b4cdd9c. The actual deployment outcome is recorded in VERIFICATION.md; phone/screen-reader checks remain explicitly pending.
+
+## October 5 continuation
+
+The [Hindi/mobile milestone](2026-10-05-hindi-mobile.md) extends the existing product with bilingual planets/stars/all IAU constellation labels, searchable and saved constellation anchors, object-specific observing events, named places, clearer Explore/Tools screens and explicit API status. It records new user requests, owners, tests and release evidence. [Tracking research](tracking-apis.md) documents verified browser delivery and provider limits; the [README human checklist](../README.md#human-action-checklist) identifies exact administrator, device and optional provider actions.

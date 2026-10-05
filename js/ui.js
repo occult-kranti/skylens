@@ -243,13 +243,14 @@ export function createUI(handlers = {}) {
     if (Number.isFinite(d.distKm)) rows.push(['Distance', `${finite(d.distKm)} km`]);
     if (d.altFt != null) rows.push(['Aircraft altitude', `${finite(d.altFt)} ft`]);
     if (d.gsKt != null) rows.push(['Ground speed', `${finite(d.gsKt)} kt`]);
+    if (d.kind === 'plane' && utcStamp(d.positionAt)) rows.push(['Position timestamp', utcStamp(d.positionAt)]);
     if (d.dim != null) rows.push(['Angular size', `${d.dim} arcmin`]);
     addRows(card, rows);
     if (d.kind === 'constellation') card.append(node('p', d.description || 'Guidance targets the catalog label anchor, not a single star or full boundary. Stick figures are illustrative.', 'help'));
     if (d.alt < 0) card.append(node('p', 'Below the horizon at the selected time and location.', 'help warning'));
     const controls = node('div', null, 'inputrow');
     controls.append(button('Guide to object', () => { handlers.locate?.({ ...d, label:d.name }); card.hidden = true; $('sky').focus(); }, 'primary'));
-    if (d.id) {
+    if (typeof d.id === 'string' && /^(star|body|dso|const|sat):/.test(d.id)) {
       const save = button(favouriteIds.has(d.id) ? 'Remove saved object' : 'Save object', () => {
         const nowSaved = handlers.toggleFavourite?.(d);
         if (typeof nowSaved === 'boolean') { nowSaved ? favouriteIds.add(d.id) : favouriteIds.delete(d.id); }
@@ -362,9 +363,13 @@ export function createUI(handlers = {}) {
     const age = timestamp ? Math.max(0, Math.round((Date.now() - timestamp) / 1000)) : null;
     const remaining = Number.isFinite(info?.remaining) ? ` · API reports ${info.remaining} requests remaining` : '';
     const retry = utcStamp(info?.retryAt), retryPending = retry && new Date(info.retryAt).getTime() > Date.now();
+    const provider = utcStamp(info?.providerAt);
     const limited = `Aircraft polling has stopped at the API limit.${remaining ? ` ${remaining.slice(3)}.` : ''} ${retryPending ? `Wait until ${retry}, then turn the aircraft feed off and on to retry.` : retry ? 'The indicated wait has elapsed. Turn the aircraft feed off and on to retry.' : 'Wait for the API allowance to reset, then turn the aircraft feed off and on to retry.'} Other users on your network may share this allowance.`;
-    $('planeMeta').textContent = status === 'ok' ? `${planes.length} in 50 nautical miles · updated ${age ?? '—'} s ago${remaining}` : status === 'limited' ? limited : status === 'error' ? 'Aircraft feed unavailable. Last positions may be stale; retrying.' : status === 'paused' ? 'Aircraft feed paused.' : status === 'simulated' ? 'Aircraft feed is paused during simulated time. Return to now to resume.' : status === 'location-needed' ? 'Set your own location in Settings before enabling aircraft requests.' : 'Aircraft feed is off.';
-    renderList($('planeList'), planes.slice(0, 12).map(p => ({ ...p, kind:'plane' })), status === 'ok' ? 'No aircraft in range.' : status === 'limited' ? 'No current aircraft positions while polling is paused.' : 'Enable the optional feed above to request live aircraft.', d => `${d.altFt == null ? 'Altitude unavailable' : `${finite(d.altFt)} ft`} · ${finite(d.distKm)} km ${Number.isFinite(d.az) ? compass16(d.az) : ''}`);
+    $('planeMeta').textContent = status === 'ok' ? `${planes.length} in 50 nautical miles · response received ${age ?? '—'} s ago${provider ? ` · provider snapshot ${provider}` : ''}${remaining}` : status === 'limited' ? limited : status === 'error' ? 'Aircraft feed unavailable. Last positions may be stale; retrying.' : status === 'paused' ? 'Aircraft feed paused.' : status === 'simulated' ? 'Aircraft feed is paused during simulated time. Return to now to resume.' : status === 'location-needed' ? 'Set your own location in Settings before enabling aircraft requests.' : 'Aircraft feed is off.';
+    renderList($('planeList'), planes.slice(0, 12).map(p => ({ ...p, kind:'plane' })), status === 'ok' ? 'No recent aircraft positions returned.' : status === 'limited' ? 'No current aircraft positions while polling is paused.' : 'Enable the optional feed above to request live aircraft.', d => {
+      const positionAge = Number.isFinite(d.positionAt) ? Math.max(0, Math.round((Date.now() - d.positionAt) / 1000)) : null;
+      return `${d.altFt == null ? 'Altitude unavailable' : `${finite(d.altFt)} ft`} · ${finite(d.distKm)} km ${Number.isFinite(d.az) ? compass16(d.az) : ''} · ${positionAge == null ? 'position age unavailable' : `position age ${positionAge} s`}`;
+    });
   }
   function tonight(t) {
     latestTonight = t;

@@ -49,15 +49,16 @@ export function startPlanes(getLoc, onUpdate) {
         // readsb-style `now` is Unix milliseconds. Receipt time alone does not
         // establish freshness if a provider or intermediary returns old data.
         if (!j || !Array.isArray(j.ac) || !Number.isFinite(j.now)) throw new Error('Aircraft response lacks a valid timestamp or position array.');
-        const providerAt = j.now;
-        if (Date.now() - providerAt > 60000 || providerAt > Date.now() + 60000) throw new Error('Aircraft response timestamp is stale or inconsistent.');
+        const providerAt = j.now, receivedAt = Date.now();
+        const payloadAgeMs = Math.max(0, receivedAt - providerAt);
+        if (payloadAgeMs > 60000 || providerAt > receivedAt + 60000) throw new Error('Aircraft response timestamp is stale or inconsistent.');
         const planes = (Array.isArray(j.ac) ? j.ac : []).filter(a =>
           Number.isFinite(a.lat) && Math.abs(a.lat) <= 90 && Number.isFinite(a.lon) && Math.abs(a.lon) <= 180 &&
-          Number.isFinite(a.alt_baro) && Number.isFinite(a.seen_pos) && a.seen_pos >= 0 && a.seen_pos <= 60)
+          Number.isFinite(a.alt_baro) && Number.isFinite(a.seen_pos) && a.seen_pos >= 0 && payloadAgeMs + a.seen_pos * 1000 <= 60000)
           .map(a => {
             const g = planeAltAz(loc.lat, loc.lon, a.lat, a.lon, a.alt_baro * .3048);
             return { id: `plane:${String(a.hex || a.flight || '')}`, flight: String(a.flight || '').trim() || String(a.hex || 'Unknown'),
-              alt: g.alt, az: g.az, distKm: g.distKm, altFt: a.alt_baro,
+              alt: g.alt, az: g.az, distKm: g.distKm, altFt: a.alt_baro, positionAt: providerAt - a.seen_pos * 1000,
               gsKt: Number.isFinite(a.gs) ? a.gs : null, track: Number.isFinite(a.track) ? a.track : null };
           }).filter(p => p.alt > -2).sort((a, b) => a.distKm - b.distKm);
         lastSuccess = Date.now(); interval = BASE_INTERVAL_MS;
