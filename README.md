@@ -1,12 +1,14 @@
 # SkyLens
 
-A camera-first, sensor-based sky overlay with a manual sky explorer. Camera frames stay on the device. Labels are calculated from your location, time and phone orientation; this is **not image recognition**.
+A sensor-based sky instrument with Auto AR, an optional live camera backdrop and a manual sky explorer. Camera frames stay on the device. Labels are calculated from your location, time and phone orientation; this is **not image recognition**.
 
 **Live application:** [https://occult-kranti.github.io/skylens/](https://occult-kranti.github.io/skylens/)
 
 ## Use the app
 
-Enable camera, choose your location, and point toward the sky. Use **Align** to correct heading and pitch and estimate your camera’s diagonal field of view. Phone compasses are imperfect: magnetic north, local interference and browser sensor conventions affect alignment. Manual drag, keyboard arrows and object search remain available without hardware permissions.
+Choose your location, tap **Auto AR**, allow motion when requested, and point toward the sky. Tracking works with the camera off. Tap **Enable camera** for an optional live backdrop; stopping or losing video keeps requested Auto AR running. **Stop Auto AR**, dragging the sky or using arrow keys returns to manual exploration. Reloading never assumes a permission grant; returning from the background can resume previously allowed motion, but camera video always needs another tap.
+
+Use **Align** to correct heading and pitch and estimate your camera’s diagonal field of view. Phone compasses are imperfect: magnetic north, local interference and browser sensor conventions affect alignment. A quiet sensor produces a visible warning while retaining the last full attitude. Manual drag, keyboard arrows and object search remain available without hardware permissions. The compact bottom console on phones becomes a side console on wide screens; expand its status row for tracking and camera explanations.
 
 * **Sky:** named-object search, planets, 1,022 catalogue stars, 89 constellation figures, 110 Messier objects, filters and directional guidance.
 * **Explore:** selected UTC time, return to now, rise/set/transit, Moon phases, astronomical darkness, annual meteor reference dates and a heliocentric solar-system diagram with linear distance scale.
@@ -33,7 +35,8 @@ Browser release checks: install pinned Playwright 1.58.2 as a development tool, 
 
 * [Living roadmap](docs/2026-10-roadmap.md) and [product brief](docs/product-brief.md)
 * [Repository baseline](docs/repository-baseline.md), [product research](docs/product-research.md), [calendar research](docs/calendar-research.md)
-* [Camera methods and phone checklist](docs/camera-methods.md), [calculation methods](docs/CALCULATIONS.md)
+* [Camera methods and phone checklist](docs/camera-methods.md), [Auto AR lifecycle](docs/auto-ar-methods.md), [calculation methods](docs/CALCULATIONS.md)
+* [Auto AR and design roadmap](docs/2026-10-05-auto-ar-roadmap.md), [design brief](DESIGN.md), [independent review](docs/2026-10-05-auto-ar-review.md)
 * [Licenses and attribution](docs/THIRD-PARTY.md), [performance](docs/performance.md), [verification](docs/VERIFICATION.md)
 
 Catalogue star coordinates are J2000 rotated with precession/nutation; proper-motion propagation is not included. Astronomy Engine 2.1.19 supplies planetary positions and events; satellite.js 4.1.4 supplies SGP4. The interactive time range is 1900–2100, not a blanket precision guarantee for every object or device. Physical iOS/Android alignment and screen-reader testing remain separate release checks.
@@ -50,7 +53,7 @@ This list distinguishes required setup from optional expansion. No account or AP
 
 - [x] **SkyLens Pages setup and first publication completed:** GitHub Actions is enabled as the Pages source. [Deployment attempt 2](https://github.com/occult-kranti/skylens/actions/runs/37329557778/attempts/2) succeeded on October 5, 2026, and the live release identity matched `367f6ee8b5ea63478e61f07e17860324ad3097bb`. The earlier administration error is resolved. Future main releases run the same verification and deployment workflow; [release.json](https://occult-kranti.github.io/skylens/release.json) records the published commit.
 - [ ] **Recommended hosting cleanup — Workbench administrator:** choose GitHub Actions in [the companion Pages settings](https://github.com/occult-kranti/astrology-sim-ant/settings/pages) to stop its legacy branch publisher from competing with the validated workflow.
-- [ ] **Required for a phone-alignment claim — device tester:** on iOS Safari and Android Chrome, allow camera/motion from the app's buttons, choose your actual location, calibrate against a known object, and test portrait/landscape, background/resume and stop/restart. Record OS/browser and measured error using [the checklist](docs/camera-methods.md). Browser mocks do not complete this step.
+- [ ] **Required for a phone-alignment claim — device tester:** on iOS Safari and Android Chrome, test Auto AR both without video and while enabling/stopping camera, choose your actual location, calibrate against a known object, and test portrait/landscape, stationary intervals, front-camera fallback, denial/retry, background/resume and manual gestures. Record OS/browser and measured error using [the checklist](docs/camera-methods.md). Browser mocks do not complete this step.
 - [ ] **Language/accessibility review — Hindi reader and assistive-technology tester:** review editorial transliterations and mixed-script pronunciation, large text, focus and screen-reader order. Supported aliases have sources; they are not a universal Indian sky-name standard.
 - [ ] **Optional sustained aircraft tracking — project owner:** review [AvioADSB's current API terms](https://avioadsb.org/docs/api). Anonymous access needs no account but is limited to 100 requests/day per network and one request / 10 seconds; at the app's 12-second rate, a continuously enabled session can reach that daily allowance in about 20 minutes. The app pauses on quota responses. A higher allowance may require the provider's account/plan and a separately designed secure server integration. No account was created or plan purchased; GitHub Pages cannot safely hide a private API key.
 - [ ] **Optional additional data — feature owner:** identify a provider, license, allowed browser/CORS use, rate limits and validation cases before adding weather, minor bodies or other feeds. NASA/JPL SSD APIs prohibit direct embedding under their published CORS policy; do not work around that restriction. The existing ISS source is CelesTrak station elements, propagated locally.
