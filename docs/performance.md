@@ -72,7 +72,7 @@ Baseline local `7c1a54a` corresponds to published remote `9480f5df`. Same Python
 
 | Resource group | Before raw / gzip bytes | Candidate raw / gzip bytes |
 |---|---:|---:|
-| HTML + CSS | 37,632 / 11,321 | 40,210 / 11,713 |
+| HTML + CSS | 37,632 / 11,321 | 41,648 / 12,012 |
 | Application JS | 147,695 / 50,599 | 164,731 / 55,515 |
 
 The independent motion controller adds one module (14 application modules total). No runtime dependency or font request was added. Catalogue/planet computation remains at 1 Hz and projection remains frame-driven; reduced-motion and visibility suspension remain in place. A deterministic timer test verifies that continuous motion reuses one watchdog deadline instead of creating one timer per sample. Scientific marker changes retain the existing 45-label budget and DPR cap of 2. No phone FPS, optical latency, energy or first-paint improvement is claimed.

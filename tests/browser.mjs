@@ -37,6 +37,7 @@ const server = createServer(async (request, response) => {
 let browser, failure;
 const completed = [];
 const browserDiagnostics = [];
+const layoutMeasurements = [];
 try {
   await new Promise((ok, no) => { server.once('error', no); server.listen(0, '127.0.0.1', ok); });
   const origin = 'http://127.0.0.1:' + server.address().port;
@@ -154,6 +155,42 @@ try {
     assert.ok(box.width >= 24 && box.height >= 24 && box.left >= -1 && box.right <= box.viewportWidth + 1 &&
       box.top >= -1 && box.bottom <= box.viewportHeight + 1 && box.hit,
     selector + ' is visible and directly reachable: ' + JSON.stringify(box));
+  }
+  async function usablePanelAndControls(page, selector, label) {
+    // Let the application's measured console sizing settle. Do not scroll controls
+    // into view: that can hide an unusably small panel or displaced primary actions.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const measured = await page.evaluate(selector => {
+      const visibleRect = element => {
+        const box = element.getBoundingClientRect();
+        let left = Math.max(0, box.left), right = Math.min(innerWidth, box.right);
+        let top = Math.max(0, box.top), bottom = Math.min(innerHeight, box.bottom);
+        for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+          const style = getComputedStyle(parent), bounds = parent.getBoundingClientRect();
+          if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+            left = Math.max(left, bounds.left + parent.clientLeft);
+            right = Math.min(right, bounds.left + parent.clientLeft + parent.clientWidth);
+          }
+          if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+            top = Math.max(top, bounds.top + parent.clientTop);
+            bottom = Math.min(bottom, bounds.top + parent.clientTop + parent.clientHeight);
+          }
+        }
+        const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+        return { width: box.width, height: box.height, visibleWidth: Math.max(0, right - left),
+          visibleHeight: Math.max(0, bottom - top), left, right, top, bottom,
+          hit: hit === element || element.contains(hit) };
+      };
+      const panel = document.querySelector(selector);
+      return { viewport: { width: innerWidth, height: innerHeight }, panel: panel ? visibleRect(panel) : null,
+        controls: ['trackingToggle', 'cameraToggle'].map(id => ({ id, ...visibleRect(document.getElementById(id)) })) };
+    }, selector);
+    layoutMeasurements.push({ label, selector, ...measured });
+    assert.ok(measured.panel && measured.panel.visibleHeight >= 140 && measured.panel.hit,
+      label + ' provides at least 140 CSS px of visible panel viewport: ' + JSON.stringify(measured));
+    for (const control of measured.controls) assert.ok(control.width >= 24 && control.height >= 24 &&
+      control.visibleWidth >= control.width - 1 && control.visibleHeight >= control.height - 1 && control.hit,
+    label + ' keeps primary control ' + control.id + ' fully visible without scrolling: ' + JSON.stringify(measured));
   }
   async function screenshot(page, label, view) {
     await page.waitForFunction(() => document.querySelector('#toasts')?.childElementCount === 0);
@@ -299,12 +336,14 @@ try {
       assert.equal(await page.locator('#solarView').isHidden(), true, 'solar system does not crowd observing results');
       assert.ok(await page.locator('#toasts .toast').count() <= 1, 'transient messages never stack over controls');
       await page.locator('#tonightBody').scrollIntoViewIfNeeded();
+      await usablePanelAndControls(page, '#panelExplore', label + ' observing at selected time');
       await screenshot(page, label, 'observing');
       await page.locator('#exploreSolar').click();
       await page.locator('#orbitView svg').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#observingView').isHidden(), true, 'solar and observing subviews are distinct');
       await reachable(page, '#exploreTonight');
       await page.locator('#orbitView svg').scrollIntoViewIfNeeded();
+      await usablePanelAndControls(page, '#panelExplore', label + ' solar at selected time');
       await screenshot(page, label, 'solar');
       await page.locator('#exploreSolar').press('ArrowLeft');
       assert.equal(await page.locator('#exploreTonight').getAttribute('aria-selected'), 'true', 'Explore subviews support arrow-key navigation');
@@ -319,6 +358,7 @@ try {
       assert.equal(await page.locator('#objectEvents dt').count(), 0, 'a constellation figure does not invent single-object rise/set events');
       await page.locator('#infocard').getByRole('button', { name: /^Save object$/ }).click();
       await page.locator('#infocard h2').scrollIntoViewIfNeeded();
+      await usablePanelAndControls(page, '#infocard', label + ' constellation detail');
       await screenshot(page, label, 'hindi-constellation');
       await findObject(page, 'Orion', 'const:Ori:59');
       await waitText(page, '#infocard h2', 'ओरायन');
@@ -334,6 +374,7 @@ try {
       await page.locator('#infocard').getByRole('button', { name: /^Save object$/ }).click();
       await reachable(page, '#infocard [data-action="save"]');
       await page.locator('#infocard h2').scrollIntoViewIfNeeded();
+      await usablePanelAndControls(page, '#infocard', label + ' planet detail');
       await screenshot(page, label, 'hindi-object');
       if (label === 'mobile') {
         const permissions = await page.evaluate(() => ({ camera: window.__capabilityTest.cameraCalls, geo: window.__capabilityTest.geoCalls }));
@@ -341,6 +382,7 @@ try {
         await waitText(page, '#infocard h2', 'मंगल');
         await layoutCheck(page, 'rotation keeps selected Hindi object within viewport');
         await reachable(page, '#infocard [data-action="save"]');
+        await usablePanelAndControls(page, '#infocard', 'rotated planet detail');
         assert.deepEqual(await page.evaluate(() => ({ camera: window.__capabilityTest.cameraCalls, geo: window.__capabilityTest.geoCalls })), permissions,
           'rotation does not request permissions again');
         await page.setViewportSize(viewport);
@@ -364,6 +406,7 @@ try {
       await waitText(page, '#toolsLocation', '51.500');
       await waitText(page, '#toolsCalculation', 'Astronomy Engine');
       await waitText(page, '#toolsFeedStatus', 'Satellites off · Aircraft off');
+      await usablePanelAndControls(page, '#panelTools', label + ' Tools at selected time');
       assert.equal(await page.locator('#setPlanes').isChecked(), false, 'tools navigation does not enable location-sharing aircraft feed');
       await page.locator('#returnLive').click();
       await page.locator('#simulationBanner').waitFor({ state: 'hidden' });
@@ -375,6 +418,7 @@ try {
       assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-pressed'), 'true', 'direct control restores persisted Hindi-only state');
       await waitText(page, '#telPos', '51.500');
       await reachable(page, '#nameMode');
+      await usablePanelAndControls(page, '#panelSettings', label + ' Settings');
       await screenshot(page, label, 'settings-hindi');
       await tab(page, 'saved');
       assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use London roof\b/ }).count(), 1, 'saved location survives reload without duplicate rows');
@@ -384,6 +428,7 @@ try {
       assert.equal(await page.locator('#savedList [data-object-key="const:Ori:59"]').count(), 1, 'Hindi constellation favourites persist without duplicate identities');
       assert.match(await page.locator('#observationNote').inputValue(), /clear northern horizon/, 'note persisted');
       await layoutCheck(page, label + ' saved');
+      await usablePanelAndControls(page, '#panelSaved', label + ' Saved');
       check();
       completed.push(label + ': camera denial/manual, direct Sky Hindi show/hide with Settings synchronization and reload, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests');
     } catch (error) {
@@ -643,7 +688,7 @@ try {
   await browser?.close();
   if (server.listening) await new Promise(ok => server.close(ok));
   await writeFile(resolve(results, 'browser-results.json'), JSON.stringify({
-    timestamp: new Date().toISOString(), completed, passed: !failure, browserDiagnostics,
+    timestamp: new Date().toISOString(), completed, passed: !failure, browserDiagnostics, layoutMeasurements,
     failure: failure ? String(failure.stack || failure) : null,
     physicalDeviceAlignment: 'not tested; requires documented phone checklist',
   }, null, 2));
