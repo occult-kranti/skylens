@@ -37,7 +37,7 @@ PR #5 run `37095245776` passed Node checks, then failed the unchanged manual-key
 
 ## Successful real browser verification
 
-[PR #5 run 37095687324](https://github.com/occult-kranti/skylens/actions/runs/37095687324) passed for candidate `e1791b916fd2cea56f76f5ba1e5e5e9ffce57b9a`. Real Chromium (Playwright 1.58.2, GitHub Ubuntu/Node22) completed both 390×844 and 1365×900 journeys and the synthetic MediaStream start/stop/restart/pagehide scenario. Browser diagnostics were empty, all local assets resolved under `/skylens/`, and no unrequested external calls occurred. All four screenshots were inspected by the UI reviewer and coordinator. This supersedes the earlier pending-browser checkpoint.
+[PR #5 run 37095687324](https://github.com/occult-kranti/skylens/actions/runs/37095687324) passed for candidate `e1791b916fd2cea56f76f5ba1e5e5e9ffce57b9a`. Real Chromium (Playwright 1.58.2, GitHub Ubuntu/Node 22) completed both 390×844 and 1365×900 journeys and the synthetic MediaStream start/stop/restart/pagehide scenario. Browser diagnostics were empty, all local assets resolved under `/skylens/`, and no unrequested external calls occurred. All four screenshots were inspected by the UI reviewer and coordinator. This supersedes the earlier pending-browser checkpoint.
 
 Screenshot review found stacked transient messages obscuring the Explore controls during rapid actions. The final UI keeps one polite notification, cancelling the previous timeout; the browser assertion bounds notifications to one and captures Explore after dismissal. The final candidate passed the same gate again before merge. Physical phone and screen-reader checks remain pending.
 
@@ -56,3 +56,19 @@ The companion Workbench deployed successfully: https://occult-kranti.github.io/a
 ## Handoff
 
 Implemented code, source-linked product research, calculation methods, attribution and measurements are committed. The sole infrastructure blocker is first-time Pages enablement above. Physical Android/Chrome and iOS/Safari alignment, camera rotation/front-lens/FOV calibration, sensor heading uncertainty and screen-reader checks remain explicit device-validation work, with steps in camera-methods.md. Deferred P2/P3 capabilities remain listed in the roadmap. Do not interpret sensor overlay as visual recognition or civil date converters as authority-specific observance calendars.
+
+## Hindi/mobile/tracking continuation — 2026-10-05
+
+[PR #6](https://github.com/occult-kranti/skylens/pull/6) preserves remote main `4e91d53ea08037042a7c5487e59c317985e55a09` and adds the milestone in [2026-10-05-hindi-mobile.md](2026-10-05-hindi-mobile.md). No changes were made to the companion Workbench in this continuation.
+
+Implementation candidate `452a883bdd9340dd50f49b87c7a256c30cc3c676` passed [run 37325500833](https://github.com/occult-kranti/skylens/actions/runs/37325500833), verification job 111815076713. Node results: 36 baseline cases, independent astronomy fixtures, 26 camera cases, 17 integration cases, 13 naming groups, 14 observing cases, 11 tracking lifecycle cases, 14 offline feed-parser assertions and 4 constellation anchor cases. Syntax and whitespace checks also passed.
+
+Real Playwright 1.58.2/Chromium on GitHub Ubuntu/Node 22 passed all six journey groups under `/skylens/`: 320×568, 390×844, 844×390, 1365×900; explicit feed-error/cooldown/opt-in controls; synthetic camera start/stop/restart/pagehide. `browser-results.json` reports `passed:true`, empty diagnostics and no failure. Zero external requests were allowed in the ordinary UI contexts; mocked orbital errors were explicitly isolated.
+
+All 20 screenshots were reviewed; solar-label overlaps were repaired and all four final solar views were inspected again by the UI reviewer and coordinator. Independent review findings and repair confirmation are recorded in 2026-10-05-review.md. Failed earlier candidate runs were obsolete harness expectations (opening a hidden Saved panel; updated source-failure wording/stop policy), not silently omitted passing gates.
+
+A separate one-time real API browser diagnostic succeeded in run 37324544677: current CelesTrak station elements and a fresh empty AvioADSB response were readable from the Pages security origin. See tracking-apis.md for exact timestamps, epoch freshness, headers, quota and limitations. This was a synthetic origin page, not a deployed application check. The temporary automatic probe was removed before the final passing run.
+
+Application JS increased from 34,123 to 50,422 individually gzip-compressed bytes; see performance.md for reproducible source-size conditions. No phone FPS or initial-load improvement is claimed. Physical phones, actual sensor alignment, screen-reader behavior and continuous upstream availability remain outside this automated evidence.
+
+At the final documentation checkpoint, first-time SkyLens Pages enablement remains blocked by repository administration access. README contains the administrator action and optional provider/account checklist; no private key or paid account is required for the current release. Merge/deploy status and exact final main SHA are available on PR #6 and its associated Actions runs. This document does not claim SkyLens has been published.
