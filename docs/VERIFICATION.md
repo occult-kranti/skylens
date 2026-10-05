@@ -1,3 +1,7 @@
+# Current globe release
+
+See [Globe verification](globe-verification.md) for the current integrated checks, evidence, deployment procedure and remaining human validation. The dated entries below are historical checkpoints; earlier Pages-setup failures were resolved and are not current blockers.
+
 # Nearby tracking candidate verification — October 5, 2026
 
 Owning repo: occult-kranti/skylens; baseline published`dcaebfbf92c67c15d0cedb7c46c888e565165f88`. Workbench Pages source independently reports`workflow`; no companion runtime changes in this release. Publication identity and workflow result will be attached to the release PR and this release's live`release.json`. Historical records below are prior checkpoints.

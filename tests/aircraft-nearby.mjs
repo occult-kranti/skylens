@@ -122,16 +122,20 @@ let sequence = 0;
 async function fixture(fn) {
   const saved = Object.fromEntries(['fetch', 'setTimeout', 'clearTimeout', 'document', 'localStorage'].map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]));
   const time = Date.now; let now = AT;
-  const jobs = new Map(), storage = new Map(); let jobId = 0;
+  const jobs = new Map(), storage = new Map(), controllers = []; let jobId = 0;
   const doc = new EventTarget(); doc.hidden = false;
   const state = { jobs, storage, doc, setNow: value => { now = value; }, requests: [] };
   Object.defineProperty(globalThis, 'document', { configurable: true, value: doc });
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: k => storage.get(k) || null, setItem: (k, v) => storage.set(k, v) } });
   globalThis.setTimeout = (fn, ms) => { jobs.set(++jobId, { fn, ms }); return jobId; };
   globalThis.clearTimeout = id => jobs.delete(id); Date.now = () => now;
-  state.importFresh = () => import(`../js/planes.js?aircraft-test=${++sequence}`);
+  state.importFresh = async () => {
+    const module = await import(`../js/planes.js?aircraft-test=${++sequence}`);
+    return { ...module, startPlanes(...args) { const controller = module.startPlanes(...args); controllers.push(controller); return controller; } };
+  };
   globalThis.fetch = async (url, options) => { state.requests.push({ url, options }); return { ok: true, status: 200, headers: new Headers(), json: async () => payload() }; };
   try { await fn(state); } finally {
+    controllers.forEach(controller => controller.stop());
     Date.now = time;
     for (const [k, desc] of Object.entries(saved)) { if (desc) Object.defineProperty(globalThis, k, desc); else delete globalThis[k]; }
   }
@@ -156,10 +160,11 @@ test('Hidden and stopped feeds never read location; pending completions cannot w
   globalThis.fetch = (_url, opts) => { signal = opts.signal; return new Promise(resolve => { finish = resolve; }); };
   const poller = startPlanes(() => { locations++; return observer; }, () => { updates++; });
   assert.equal(locations, 0); assert.equal(s.jobs.size, 0);
-  s.doc.hidden = false; s.doc.dispatchEvent(new Event('visibilitychange')); assert.equal(locations, 1);
+  s.doc.hidden = false; s.doc.dispatchEvent(new Event('visibilitychange')); await flush(); assert.equal(locations, 1);
   s.doc.hidden = true; s.doc.dispatchEvent(new Event('visibilitychange')); assert.equal(signal.aborted, true); assert.equal(s.jobs.size, 0);
   finish({ ok: true, json: async () => payload() }); await flush(); assert.equal(updates, 0);
-  s.doc.hidden = false; s.doc.dispatchEvent(new Event('visibilitychange')); assert.equal(locations, 2);
+  s.setNow(AT + 12000);
+  s.doc.hidden = false; s.doc.dispatchEvent(new Event('visibilitychange')); await flush(); assert.equal(locations, 2);
   poller.stop(); assert.equal(signal.aborted, true); finish({ ok: true, json: async () => payload() }); await flush();
   s.doc.dispatchEvent(new Event('visibilitychange')); assert.equal(locations, 2); assert.equal(updates, 0); assert.equal(s.jobs.size, 0);
 }));
@@ -175,6 +180,7 @@ test('401/403/429 pause persistently across controller/module restart without st
     const serialized = [...s.storage.values()].join(''); assert.ok(!serialized.includes('37.123456') && !serialized.includes('121.987654'));
     const b = await s.importFresh(); let locations = 0;
     const second = b.startPlanes(() => { locations++; return observer; }, value => { update = value; });
+    await flush();
     assert.equal(requests, 1); assert.equal(locations, 0); assert.equal(update.httpStatus, status); second.stop();
   }
   assert.equal(quotaResetTime(new Headers({ 'Retry-After': '60', 'X-RateLimit-Reset': '3600' }), AT, 'avioadsb'), AT + 3600000);
@@ -186,9 +192,11 @@ test('Invalid observer, malformed JSON and network failure cannot leak coordinat
   globalThis.fetch = async () => { called++; throw new Error('SECRET provider body coordinates37.123'); };
   let poller = startPlanes(() => ({ lat: NaN, lon: 0 }), value => { update = value; }); await flush();
   assert.equal(called, 0); assert.equal(update.status, 'location-needed'); poller.stop();
+  s.setNow(AT + 12000);
   poller = startPlanes(() => observer, value => { update = value; }); await flush();
   assert.equal(update.status, 'error'); assert.ok(!JSON.stringify(update).includes('SECRET')); assert.ok([...s.jobs.values()].some(j => j.ms === 24000)); poller.stop();
   globalThis.fetch = async () => ({ ok: true, json: async () => { throw new Error('InvalidJSON'); } });
+  s.setNow(AT + 24000);
   poller = startPlanes(() => observer, value => { update = value; }); await flush(); assert.equal(update.status, 'error'); poller.stop();
   assert.equal(s.jobs.size, 0);
 }));

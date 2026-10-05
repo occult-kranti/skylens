@@ -240,6 +240,9 @@ try {
       assert.ok(failedRequests.some(x => /avioadsb/.test(x.url) && /ABORTED|ERR_FAILED/.test(x.error)), 'off aborts the in-flight aircraft request');
       assert.equal(await page.locator('#planeList [data-object-key]').count(), 0, 'late request completion cannot revive disabled aircraft');
       mode.avioadsb = 'ok'; await enablePlanes(page);
+      // Stopping and restarting cannot evade the shared 12-second Avio request
+      // reservation. Advance the fixture clock rather than remove that guard.
+      await page.clock.fastForward(13000);
       await page.locator('#planeList [data-object-key="plane:abcdef"]').waitFor();
       await tab(page, 'tonight'); await page.locator('#skyTime').fill('2001-01-01T00:00'); await page.locator('#timeForm button[type=submit]').click();
       await text(page, '#planeMeta', /simulated|paused/i);

@@ -1,0 +1,88 @@
+{
+  "measuredAt": "2026-10-05T23:42:50.998Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+  "viewport": {
+    "width": 900,
+    "height": 740,
+    "dpr": 1
+  },
+  "records": 60000,
+  "warmups": 5,
+  "rounds": 9,
+  "iterations": 10,
+  "reports": [
+    {
+      "revision": "before-cache",
+      "combinedSourceSha256": "a0a99b40cc38547204f84eda03a21490680d8c5af63806eff6ced33b6c07aad3",
+      "results": [
+        {
+          "panel": "closed",
+          "samples": [
+            7.220000000298024,
+            6.28999999910593,
+            5.120000000298023,
+            6.679999999701977,
+            5.540000000596047,
+            6.270000000298023,
+            5.45,
+            5.670000000298023,
+            5.570000000298023
+          ],
+          "median": 5.670000000298023
+        },
+        {
+          "panel": "objects",
+          "samples": [
+            7.7,
+            8.540000000596047,
+            9.020000000298023,
+            10.429999999701977,
+            11.620000000298024,
+            8.069999998807907,
+            8.040000000596047,
+            7.740000000596046,
+            7.779999999701976
+          ],
+          "median": 8.069999998807907
+        }
+      ]
+    },
+    {
+      "revision": "current",
+      "combinedSourceSha256": "2cc5d1dc195806f139f531ef1fa17dabf44c700f136361f5f58e2723057d77f3",
+      "results": [
+        {
+          "panel": "closed",
+          "samples": [
+            0.1,
+            0.15,
+            0.15,
+            0.0800000011920929,
+            0.1199999988079071,
+            0.11000000089406967,
+            0.10999999940395355,
+            0.14000000059604645,
+            0.07999999970197677
+          ],
+          "median": 0.11000000089406967
+        },
+        {
+          "panel": "objects",
+          "samples": [
+            0.22000000029802322,
+            0.24000000059604645,
+            0.17999999970197678,
+            0.20999999940395356,
+            0.22000000029802322,
+            0.19000000059604644,
+            0.15999999940395354,
+            0.22999999970197677,
+            0.15
+          ],
+          "median": 0.20999999940395356
+        }
+      ]
+    }
+  ],
+  "scope": "Unchanged synthetic object array with repeated view updates. UI JavaScript/DOM/layout only; excludes canvas, paint/compositor, incoming snapshots, network, sensors and phone hardware. These are implementation-stage before/after costs, not a speedup of the whole application."
+}

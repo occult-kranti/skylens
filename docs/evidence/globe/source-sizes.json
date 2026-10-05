@@ -1,0 +1,302 @@
+{
+  "baseline": {
+    "localRevision": "d8e74f831f34115a6fa5fb55be4a70474f5118ef",
+    "remoteRevision": "9b9fa56722c605b96cabdb4cb0a2e6855a9e4188",
+    "groups": {
+      "sky_html_css": {
+        "files": 2,
+        "rawBytes": 47814,
+        "sumGzipBytes": 13422,
+        "inventory": [
+          {
+            "path": "index.html",
+            "raw": 24882,
+            "gzip": 7749
+          },
+          {
+            "path": "css/style.css",
+            "raw": 22932,
+            "gzip": 5673
+          }
+        ]
+      },
+      "application_js": {
+        "files": 17,
+        "rawBytes": 226517,
+        "sumGzipBytes": 75240,
+        "inventory": [
+          {
+            "path": "js/aircraft-geometry.js",
+            "raw": 7221,
+            "gzip": 2721
+          },
+          {
+            "path": "js/astro.js",
+            "raw": 9048,
+            "gzip": 3630
+          },
+          {
+            "path": "js/events.js",
+            "raw": 5382,
+            "gzip": 2261
+          },
+          {
+            "path": "js/handoff.js",
+            "raw": 6160,
+            "gzip": 2462
+          },
+          {
+            "path": "js/main.js",
+            "raw": 40426,
+            "gzip": 12307
+          },
+          {
+            "path": "js/names.js",
+            "raw": 14811,
+            "gzip": 4971
+          },
+          {
+            "path": "js/nearby.js",
+            "raw": 2988,
+            "gzip": 1295
+          },
+          {
+            "path": "js/objects.js",
+            "raw": 3142,
+            "gzip": 1367
+          },
+          {
+            "path": "js/observing.js",
+            "raw": 5186,
+            "gzip": 2251
+          },
+          {
+            "path": "js/orbits.js",
+            "raw": 5908,
+            "gzip": 2655
+          },
+          {
+            "path": "js/planes.js",
+            "raw": 12700,
+            "gzip": 4374
+          },
+          {
+            "path": "js/render.js",
+            "raw": 16453,
+            "gzip": 5218
+          },
+          {
+            "path": "js/satellites.js",
+            "raw": 19167,
+            "gzip": 6669
+          },
+          {
+            "path": "js/sensors.js",
+            "raw": 5357,
+            "gzip": 1813
+          },
+          {
+            "path": "js/sky.js",
+            "raw": 3299,
+            "gzip": 1512
+          },
+          {
+            "path": "js/tracking.js",
+            "raw": 8595,
+            "gzip": 2579
+          },
+          {
+            "path": "js/ui.js",
+            "raw": 60674,
+            "gzip": 17155
+          }
+        ]
+      }
+    }
+  },
+  "candidate": {
+    "groups": {
+      "sky_html_css": {
+        "files": 2,
+        "rawBytes": 48465,
+        "sumGzipBytes": 13564,
+        "inventory": [
+          {
+            "path": "index.html",
+            "raw": 25170,
+            "gzip": 7839
+          },
+          {
+            "path": "css/style.css",
+            "raw": 23295,
+            "gzip": 5725
+          }
+        ]
+      },
+      "application_js": {
+        "files": 23,
+        "rawBytes": 318072,
+        "sumGzipBytes": 104985,
+        "inventory": [
+          {
+            "path": "js/aircraft-geometry.js",
+            "raw": 7221,
+            "gzip": 2721
+          },
+          {
+            "path": "js/astro.js",
+            "raw": 9048,
+            "gzip": 3630
+          },
+          {
+            "path": "js/events.js",
+            "raw": 5382,
+            "gzip": 2261
+          },
+          {
+            "path": "js/globe-math.js",
+            "raw": 7160,
+            "gzip": 2758
+          },
+          {
+            "path": "js/globe-render.js",
+            "raw": 24072,
+            "gzip": 7589
+          },
+          {
+            "path": "js/globe-ui.js",
+            "raw": 23405,
+            "gzip": 7368
+          },
+          {
+            "path": "js/globe.js",
+            "raw": 11055,
+            "gzip": 3668
+          },
+          {
+            "path": "js/handoff.js",
+            "raw": 6160,
+            "gzip": 2462
+          },
+          {
+            "path": "js/main.js",
+            "raw": 42526,
+            "gzip": 12889
+          },
+          {
+            "path": "js/names.js",
+            "raw": 14811,
+            "gzip": 4971
+          },
+          {
+            "path": "js/nearby.js",
+            "raw": 2988,
+            "gzip": 1295
+          },
+          {
+            "path": "js/objects.js",
+            "raw": 3142,
+            "gzip": 1367
+          },
+          {
+            "path": "js/observing.js",
+            "raw": 5186,
+            "gzip": 2251
+          },
+          {
+            "path": "js/orbits.js",
+            "raw": 5908,
+            "gzip": 2655
+          },
+          {
+            "path": "js/planes.js",
+            "raw": 15100,
+            "gzip": 5036
+          },
+          {
+            "path": "js/render.js",
+            "raw": 16453,
+            "gzip": 5218
+          },
+          {
+            "path": "js/satellites.js",
+            "raw": 19167,
+            "gzip": 6669
+          },
+          {
+            "path": "js/sensors.js",
+            "raw": 5357,
+            "gzip": 1813
+          },
+          {
+            "path": "js/sky.js",
+            "raw": 3299,
+            "gzip": 1512
+          },
+          {
+            "path": "js/tracking.js",
+            "raw": 8595,
+            "gzip": 2579
+          },
+          {
+            "path": "js/traffic-feed.js",
+            "raw": 20593,
+            "gzip": 6648
+          },
+          {
+            "path": "js/traffic-worker.js",
+            "raw": 770,
+            "gzip": 470
+          },
+          {
+            "path": "js/ui.js",
+            "raw": 60674,
+            "gzip": 17155
+          }
+        ]
+      },
+      "globe_html_css": {
+        "files": 2,
+        "rawBytes": 22603,
+        "sumGzipBytes": 7024,
+        "inventory": [
+          {
+            "path": "globe.html",
+            "raw": 10362,
+            "gzip": 3573
+          },
+          {
+            "path": "css/globe.css",
+            "raw": 12241,
+            "gzip": 3451
+          }
+        ]
+      },
+      "new_vendor": {
+        "files": 1,
+        "rawBytes": 22478,
+        "sumGzipBytes": 8658,
+        "inventory": [
+          {
+            "path": "vendor/d3-geo.js",
+            "raw": 22478,
+            "gzip": 8658
+          }
+        ]
+      },
+      "new_geography": {
+        "files": 1,
+        "rawBytes": 138160,
+        "sumGzipBytes": 51269,
+        "inventory": [
+          {
+            "path": "data/earth-land.geojson",
+            "raw": 138160,
+            "gzip": 51269
+          }
+        ]
+      }
+    }
+  },
+  "measurement": "Python gzip.compress(mtime=0) summed independently perfile. Source cost, notinitialnetworkwaterfallorfirstpaint. NewglobepageassetsnotimportedbySky;application_jsisrepo-widecodeinventory."
+}

@@ -17,6 +17,7 @@ export const AIRCRAFT_PROVIDERS = Object.freeze({
 });
 const MAX_INTERVAL_MS = 120000, FUTURE_TOLERANCE_MS = 5000;
 const COOLDOWN_KEY = 'skylens.aircraft.cooldowns.v1', cooldowns = new Map();
+const RESERVATION_KEY = 'skylens.aircraft.requests.v1', reservations = new Map();
 const clean = (value, max = 100) => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max) : '';
 function providerConfig(id) {
   if (typeof id !== 'string' || !Object.hasOwn(AIRCRAFT_PROVIDERS, id)) throw new RangeError('Choose a supported aircraft provider.');
@@ -61,6 +62,35 @@ function loadCooldown(id) {
 function saveCooldown(id, value) {
   cooldowns.set(id, value);
   try { globalThis.localStorage?.setItem(COOLDOWN_KEY, JSON.stringify(Object.fromEntries(cooldowns))); } catch { /* No locations or payloads are ever stored. */ }
+}
+
+// A shared request budget survives view switches and reloads without storing
+// locations. Web Locks serialize tabs when available; otherwise storage plus
+// process memory are best effort (they cannot coordinate other devices/networks).
+export function reserveAircraftRequest(providerId, { signal } = {}) {
+  const provider = providerConfig(providerId);
+  const reserve = () => {
+    if (signal?.aborted) return { allowed: false, cancelled: true };
+    const now = Date.now(), cooldown = loadCooldown(providerId);
+    if (cooldown?.retryAt > now) return { allowed: false, ...cooldown };
+    let retryAt = reservations.get(providerId) || 0;
+    try {
+      const saved = JSON.parse(globalThis.localStorage?.getItem(RESERVATION_KEY) || '{}')?.[providerId];
+      if (Number.isFinite(saved) && saved <= now + 2 * provider.intervalMs) retryAt = Math.max(retryAt, saved);
+    } catch { /* Memory remains available when storage is blocked. */ }
+    if (retryAt > now) return { allowed: false, status: 'waiting', retryAt };
+    retryAt = now + provider.intervalMs;
+    reservations.set(providerId, retryAt);
+    try {
+      const saved = JSON.parse(globalThis.localStorage?.getItem(RESERVATION_KEY) || '{}');
+      const next = Object.fromEntries(Object.keys(AIRCRAFT_PROVIDERS).flatMap(id => Number.isFinite(saved?.[id]) ? [[id, saved[id]]] : []));
+      next[providerId] = retryAt;
+      globalThis.localStorage?.setItem(RESERVATION_KEY, JSON.stringify(next));
+    } catch { /* Best effort, never include observer data. */ }
+    return { allowed: true, retryAt };
+  };
+  const locks = globalThis.navigator?.locks;
+  return locks?.request ? locks.request(`skylens-aircraft-request:${providerId}`, { mode: 'exclusive', ...(signal ? { signal } : {}) }, reserve) : reserve();
 }
 
 export function refreshAircraftPositions(planes, observer, now = Date.now()) {
@@ -128,11 +158,20 @@ export function startPlanes(getLoc, onUpdate, { provider: providerId = DEFAULT_A
     const token = ++requestId;
     const alive = () => !stopped && !hidden() && token === requestId;
     const valid = () => alive() && !controller?.signal.aborted;
+    let nextInterval = null;
     try {
+      inFlight = true; const requestController = controller = new AbortController();
+      const reservationResult = reserveAircraftRequest(provider.id, { signal: requestController.signal });
+      const reservation = typeof reservationResult?.then === 'function' ? await reservationResult : reservationResult;
+      if (!valid() || reservation.cancelled) return;
+      if (!reservation.allowed) {
+        quotaPaused = reservation.status !== 'waiting';
+        nextInterval = Math.max(1, reservation.retryAt - Date.now());
+        emit({ ...reservation, planes: [] }); return;
+      }
       const selected = getLoc();
       if (!observerValid(selected)) { emit({ status: 'location-needed', planes: [] }); schedule(provider.intervalMs); return; }
       const loc = { lat: selected.lat, lon: selected.lon, ...(selected.heightM == null ? {} : { heightM: selected.heightM }) };
-      inFlight = true; const requestController = controller = new AbortController();
       timeout = setTimeout(() => requestController.abort(), 10000);
       const response = await fetch(endpoint(provider, loc, rangeNm), { signal: requestController.signal, credentials: 'omit', redirect: 'error', cache: 'no-store' });
       if (!valid()) return;
@@ -153,7 +192,7 @@ export function startPlanes(getLoc, onUpdate, { provider: providerId = DEFAULT_A
     } catch {
       if (alive()) { interval = Math.min(interval * 2, MAX_INTERVAL_MS); emit({ status: 'error', planes: [], error: 'Aircraft data could not be loaded or failed freshness checks.' }); }
     } finally {
-      if (token === requestId) { clearTimeout(timeout); timeout = null; controller = null; inFlight = false; schedule(interval); }
+      if (token === requestId) { clearTimeout(timeout); timeout = null; controller = null; inFlight = false; schedule(nextInterval ?? interval); }
     }
   }
   function interrupt() { requestId++; clearTimeout(timer); clearTimeout(timeout); timer = timeout = null; controller?.abort(); controller = null; inFlight = false; }

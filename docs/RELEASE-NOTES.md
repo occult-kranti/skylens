@@ -1,3 +1,13 @@
+# SkyLens0.4 — Globe and connected tracking workspace
+
+A new [Globe view](https://occult-kranti.github.io/skylens/globe.html) provides worldwide drag/pinch/wheel/keyboard navigation, independent aircraft/satellite switches, an explicit regional query or permitted receiver connection, searchable/filterable loaded objects, selection, follow, session trails and a permission-isolated return to Sky. A persistent Globe entry joins existing Sky controls. The mobile inspector keeps selected targets visible and places actions before telemetry.
+
+The scientific canvas uses pinned D3 clipping, public-domain Natural Earth land, original tested projection/picking and existing satellite.js SGP4. Bounded labels and adaptive grids preserve legibility. Receiver parsing runs in a cancellable worker; source ages, coverage, failures and quotas remain visible. No unrestricted global feed, historical flight archive, terrain or image recognition is implied.
+
+[Seven-product premium research](premium-tracking-design-research.md), [design decisions](tracking-design-brief.md), [roadmap](2026-10-05-globe-roadmap.md), [methods](globe-methods.md) and [actual verification/performance](globe-verification.md) accompany this release. Consumer subscriptions and API rights are separate. Current publication identity is in [release.json](https://occult-kranti.github.io/skylens/release.json); the release PR records exact CI and live checks. No new mandatory account or paid service was introduced.
+
+## Earlier releases
+
 # Nearby satellites and aircraft — 2026-10-05
 
 - Persistent Satellites/Planes on/off buttons and Nearby status, with44px mobile targets, one consent flow per provider/visit,25/50/100NM aircraft ground radius and explicit availability/quota states.

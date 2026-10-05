@@ -1,0 +1,866 @@
+{
+  "ok": true,
+  "completed": [
+    "small-mobile: keyboard/mouse/wheel/zoom/GPS, explicit regional/global data, hemisphere picking, search/follow/manual cancellation/layer off, real SGP4 fixture",
+    "mobile: keyboard/mouse/wheel/zoom/GPS, explicit regional/global data, hemisphere picking, search/follow/manual cancellation/layer off, real SGP4 fixture",
+    "landscape: keyboard/mouse/wheel/zoom/GPS, explicit regional/global data, hemisphere picking, search/follow/manual cancellation/layer off, real SGP4 fixture",
+    "desktop: keyboard/mouse/wheel/zoom/GPS, explicit regional/global data, hemisphere picking, search/follow/manual cancellation/layer off, real SGP4 fixture",
+    "pinch and zoom bounds, location denial, receiver URL/schema/empty/CORS failure, hidden pause, stale follow/expiry, request abort and private endpoint handling",
+    "regional area reservation,429 cooldown, provider preview consent,403 stop/no fallback"
+  ],
+  "layouts": [
+    {
+      "label": "small-mobile world",
+      "width": 320,
+      "height": 568,
+      "scrollWidth": 320,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile global receiver",
+      "width": 320,
+      "height": 568,
+      "scrollWidth": 320,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile selected details",
+      "width": 320,
+      "height": 568,
+      "scrollWidth": 320,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile world",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile global receiver",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile selected details",
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 88,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape world",
+      "width": 844,
+      "height": 390,
+      "scrollWidth": 844,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 96,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 96,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape global receiver",
+      "width": 844,
+      "height": 390,
+      "scrollWidth": 844,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 96,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 96,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape selected details",
+      "width": 844,
+      "height": 390,
+      "scrollWidth": 844,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 96,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 96,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop world",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 92,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 92,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop global receiver",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 92,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 92,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop selected details",
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "selectedCentreVisible": true,
+      "controls": [
+        {
+          "id": "globePlanes",
+          "width": 92,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeSatellites",
+          "width": 92,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomIn",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeZoomOut",
+          "width": 50,
+          "height": 44.5,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeReset",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        },
+        {
+          "id": "globeLocation",
+          "width": 50,
+          "height": 44,
+          "visible": true,
+          "hit": true
+        }
+      ]
+    }
+  ],
+  "navigation": [
+    {
+      "width": 320,
+      "height": 568,
+      "scrollWidth": 320,
+      "controlWidth": 56,
+      "controlHeight": 44,
+      "visible": true,
+      "hit": true
+    },
+    {
+      "width": 560,
+      "height": 320,
+      "scrollWidth": 560,
+      "controlWidth": 56,
+      "controlHeight": 44,
+      "visible": true,
+      "hit": true
+    }
+  ],
+  "screenshots": [
+    "globe-small-mobile-world.png",
+    "globe-small-mobile-regional.png",
+    "globe-small-mobile-global-receiver.png",
+    "globe-small-mobile-selected.png",
+    "globe-small-mobile-satellite.png",
+    "globe-mobile-world.png",
+    "globe-mobile-regional.png",
+    "globe-mobile-global-receiver.png",
+    "globe-mobile-selected.png",
+    "globe-mobile-satellite.png",
+    "globe-landscape-world.png",
+    "globe-landscape-regional.png",
+    "globe-landscape-global-receiver.png",
+    "globe-landscape-selected.png",
+    "globe-landscape-satellite.png",
+    "globe-desktop-world.png",
+    "globe-desktop-regional.png",
+    "globe-desktop-global-receiver.png",
+    "globe-desktop-selected.png",
+    "globe-desktop-satellite.png",
+    "globe-mobile-empty-source.png",
+    "globe-mobile-source-error.png"
+  ],
+  "requests": [
+    {
+      "label": "small-mobile",
+      "kind": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/15.000/0.000/25",
+      "method": "GET"
+    },
+    {
+      "label": "small-mobile",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "small-mobile",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "small-mobile",
+      "kind": "celestrak",
+      "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=JSON",
+      "method": "GET"
+    },
+    {
+      "label": "small-mobile",
+      "kind": "celestrak",
+      "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=JSON",
+      "method": "GET"
+    },
+    {
+      "label": "mobile",
+      "kind": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/15.000/0.000/25",
+      "method": "GET"
+    },
+    {
+      "label": "mobile",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "mobile",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "mobile",
+      "kind": "celestrak",
+      "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=JSON",
+      "method": "GET"
+    },
+    {
+      "label": "mobile",
+      "kind": "celestrak",
+      "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=JSON",
+      "method": "GET"
+    },
+    {
+      "label": "landscape",
+      "kind": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/15.000/0.000/25",
+      "method": "GET"
+    },
+    {
+      "label": "landscape",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "landscape",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "landscape",
+      "kind": "celestrak",
+      "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=JSON",
+      "method": "GET"
+    },
+    {
+      "label": "landscape",
+      "kind": "celestrak",
+      "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=JSON",
+      "method": "GET"
+    },
+    {
+      "label": "desktop",
+      "kind": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/15.000/0.000/25",
+      "method": "GET"
+    },
+    {
+      "label": "desktop",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "desktop",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "desktop",
+      "kind": "celestrak",
+      "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=JSON",
+      "method": "GET"
+    },
+    {
+      "label": "desktop",
+      "kind": "celestrak",
+      "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=JSON",
+      "method": "GET"
+    },
+    {
+      "label": "lifecycle",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "lifecycle",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "lifecycle",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "lifecycle",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "lifecycle",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "lifecycle",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "lifecycle",
+      "kind": "receiver",
+      "url": "https://receiver.example.org/aircraft.json",
+      "method": "GET"
+    },
+    {
+      "label": "reservation",
+      "kind": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/15.000/0.000/50",
+      "method": "GET"
+    },
+    {
+      "label": "reservation",
+      "kind": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/20.000/10.000/50",
+      "method": "GET"
+    },
+    {
+      "label": "reservation",
+      "kind": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/20.000/10.000/50",
+      "method": "GET"
+    },
+    {
+      "label": "reservation",
+      "kind": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/20.000/10.000/50",
+      "method": "GET"
+    },
+    {
+      "label": "reservation",
+      "kind": "adsbfi",
+      "url": "https://opendata.adsb.fi/api/v3/lat/20.000/lon/10.000/dist/50",
+      "method": "GET"
+    }
+  ],
+  "error": null,
+  "fixtureTime": "2000-06-27T18:50:19.733Z",
+  "evidence": "Chromium with mocked HTTP, device location and synthetic touch. Real local map assets/SGP4. No provider availability, global coverage or physical phone proof."
+}

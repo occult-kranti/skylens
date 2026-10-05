@@ -85,6 +85,20 @@ export function readPreferences(storage) {
   try { return normalizePreferences(JSON.parse(storage?.getItem(PREFS_KEY) || '{}')); }
   catch { return normalizePreferences(); }
 }
+// A same-tab globe selection carries identity only, never a feed permission or
+// a cached position. The sky resolves it only against a fresh, enabled source.
+export function takeGlobeTarget(storage, now = Date.now()) {
+  try {
+    const raw = storage?.getItem('skylens.globe-target.v1');
+    storage?.removeItem('skylens.globe-target.v1');
+    const value = JSON.parse(raw || 'null');
+    if (!value || !Number.isFinite(value.at) || value.at > now || now - value.at > 300000 ||
+        typeof value.id !== 'string' || !/^(plane:~?[A-Fa-f0-9]{6}|sat:\d{1,9})$/.test(value.id) ||
+        value.kind !== (value.id.startsWith('plane:') ? 'plane' : 'satellite') ||
+        typeof value.name !== 'string' || value.name.length > 100 || /[\u0000-\u001f\u007f]/.test(value.name)) return null;
+    return { id: value.id, name: value.name, kind: value.kind, at: value.at };
+  } catch { return null; }
+}
 export function searchCatalogue(objects, query, favourites = []) {
   const q = String(query || '').trim().toLocaleLowerCase();
   return objects.filter(o => o.name && (!q || searchNames(o, q) || [o.altName, o.kind].some(x => String(x || '').toLocaleLowerCase().includes(q))))
@@ -139,6 +153,9 @@ export function createApplication() {
   let storage = null;
   try { storage = localStorage; } catch { /* storage blocked */ }
   const prefs = readPreferences(storage);
+  let pendingGlobeTarget = null;
+  try { pendingGlobeTarget = takeGlobeTarget(sessionStorage); } catch { /* blocked storage */ }
+  if (pendingGlobeTarget) prefs.selectedTime = null;
   let incomingHandoff = null, handoffError = '';
   try { incomingHandoff = parseSkyHandoff(location.hash); }
   catch (error) { handoffError = error.message; }
@@ -265,6 +282,7 @@ export function createApplication() {
   function search(value) { query = String(value || ''); return searchCatalogue(allObjects(), query, state.favourites); }
   function locate(target) {
     pendingHandoffObject = null; // a deliberate new target supersedes late import selection
+    pendingGlobeTarget = null;
     if (!target) { state.highlight = null; state.selectedId = null; return; }
     if (target.kind === 'plane' || target.id?.startsWith('plane:')) {
       const fresh = state.planes.find(row => row.id === target.id);
@@ -481,6 +499,16 @@ export function createApplication() {
     ui.skyList(snapshot.bodies.filter(b => b.alt > -6), snapshot.stars.filter(s => s.name && s.alt > 0).slice(0, 8));
     ui.satList(state.sats, state.tleMeta); ui.planeList(state.aircraftReports, state.planeStatus, state.planeAge, state.planeInfo);
     ui.nearbyState?.(state);
+    if (pendingGlobeTarget) {
+      const target = allObjects().find(o => o.id === pendingGlobeTarget.id);
+      if (Date.now() - pendingGlobeTarget.at > 300000) {
+        pendingGlobeTarget = null; $('globeTargetStatus').textContent = 'Globe selection expired. Choose an object from the current sky.';
+      } else if (target && (target.kind !== 'plane' || target.overlayEligible !== false)) {
+        const name = pendingGlobeTarget.name;
+        locate(target); ui.showInfo(target);
+        $('globeTargetStatus').textContent = `Located ${name} from a current source for your sky observer.`;
+      }
+    }
     ui.statusDot('adsb', !state.layers.planes ? 'off' : state.planeStatus === 'ok' ? 'ok' : 'warn', `Aircraft: ${state.layers.planes ? state.planeStatus : 'off'}`);
     ui.searchResults?.(search(query)); updateSaved();
     const eventKey = [state.selectedTime || Math.floor(date.getTime() / 60000), state.loc.lat, state.loc.lon, state.nameMode].join('|');
@@ -608,6 +636,11 @@ export function createApplication() {
   document.body.classList.toggle('night', state.night);
   cameraStatus('off', 'Rendered sky. Camera is optional and stays off until enabled.');
   trackingChanged(tracking.state);
+  if (pendingGlobeTarget) {
+    $('globeTargetStatus').hidden = false;
+    $('globeTargetStatus').textContent = `To locate ${pendingGlobeTarget.name}, enable ${pendingGlobeTarget.kind === 'plane' ? 'Planes' : 'Satellites'} for your sky observer. The globe query area or source may have different coverage. No feed or device permission was transferred.`;
+    ui.setTab('traffic');
+  }
   resumeClock();
   Promise.allSettled([loadStars(), loadConstellations(), loadDSOs()]).then(results => {
     if (disposed) return;

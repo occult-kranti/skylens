@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#060b11">
+  <title>SkyLens Globe — aircraft and satellites</title>
+  <meta name="description" content="Explore Earth, view explicitly loaded aircraft reports and calculated satellite positions, and continue in the SkyLens sky view.">
+  <link rel="stylesheet" href="css/globe.css">
+</head>
+<body>
+<main id="globeApp">
+  <canvas id="globeCanvas" tabindex="0" role="img" aria-label="Interactive Earth globe" aria-describedby="globeHelp"></canvas>
+  <p id="globeHelp" class="sr-only">Drag to rotate Earth. Pinch, scroll, or use plus and minus to zoom. With the globe focused, arrow keys rotate, plus and minus zoom, and Home resets the world view. Manual navigation stops following an object. Search received objects for a text alternative. Moving the globe never loads aircraft data.</p>
+
+  <header class="globe-header">
+    <div class="globe-heading"><a href="index.html" class="back-link">← Sky view</a><h1>SKYLENS <span>GLOBE</span></h1></div>
+    <div class="globe-layers" role="group" aria-label="Globe layers">
+      <button id="globePlanes" type="button" aria-pressed="false"><span>Aircraft</span><small id="globePlanesState">Off</small></button>
+      <button id="globeSatellites" type="button" aria-pressed="false"><span>Satellites</span><small id="globeSatellitesState">Off</small></button>
+    </div>
+    <button id="globeCoverage" type="button" aria-controls="globeDataPanel"><span id="globeFeedStatus">Aircraft data off</span><small>Data &amp; coverage ↗</small></button>
+  </header>
+
+  <nav id="globeMapControls" aria-label="Globe navigation">
+    <button id="globeZoomIn" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+    <button id="globeZoomOut" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+    <button id="globeReset" type="button" aria-label="Reset world view" title="Reset world view">World</button>
+    <button id="globeLocation" type="button" aria-label="Use device location to centre globe" title="Use device location to centre globe">Locate</button>
+    <button id="globeStopFollow" type="button" hidden>Stop<br>follow</button>
+  </nav>
+  <div id="globeViewReadout" aria-label="Map view"><output id="globeViewCoordinates" aria-live="off">0.00° N · 0.00° E</output><output id="globeZoomValue" aria-live="off">1.0×</output><span id="globeDensity" hidden></span></div>
+  <p id="globeStatus" role="status" aria-live="polite" hidden></p>
+
+  <aside id="globePanel" aria-label="Globe objects and data">
+    <button id="globePanelToggle" type="button" aria-expanded="false" aria-controls="globePanelBody"><span id="globePanelTitle">Objects &amp; data</span><span aria-hidden="true">⌃</span></button>
+    <div id="globePanelBody" hidden>
+      <div class="globe-panel-bar"><div role="tablist" aria-label="Globe panel">
+        <button id="globeObjectsTab" type="button" role="tab" aria-selected="true" aria-controls="globeObjectsPanel">Objects</button>
+        <button id="globeDataTab" type="button" role="tab" aria-selected="false" aria-controls="globeDataPanel" tabindex="-1">Data &amp; coverage</button>
+      </div><button id="globePanelClose" type="button" aria-label="Close objects and data">Close</button></div>
+      <section id="globeObjectsPanel" class="globe-panel-content" role="tabpanel" aria-labelledby="globeObjectsTab">
+        <label for="globeSearch">Search loaded objects</label><input id="globeSearch" type="search" placeholder="Name, callsign or identifier" autocomplete="off">
+        <p id="globeObjectsSummary" class="help">Load an aircraft area or enable satellites to explore received objects.</p>
+        <ul id="globeList" aria-label="Loaded objects"></ul>
+      </section>
+      <section id="globeDetails" class="globe-panel-content" aria-label="Selected object" hidden>
+        <button id="globeDetailsBack" class="text-button" type="button">← All loaded objects</button>
+        <h2 id="globeObjectName" tabindex="-1">Selected object</h2>
+        <p id="globeObjectStatus" class="help"></p><dl id="globeObjectFacts"></dl>
+        <div class="actions"><button id="globeFollow" type="button" aria-pressed="false">Follow object</button><a id="globeSkyLink" class="button" href="index.html">View in Sky</a></div>
+        <p class="help">Sky view uses the selected observer, not the aircraft’s location. Camera and motion stay off until you enable them there.</p>
+      </section>
+      <section id="globeDataPanel" class="globe-panel-content" role="tabpanel" aria-labelledby="globeDataTab" hidden>
+        <h2>Know what is loaded</h2><p id="globeFeedDetails" class="help">The full globe is a navigation view, not a promise of worldwide aircraft coverage.</p>
+        <button id="globeStopAircraft" type="button">Stop aircraft feed</button>
+        <p class="help">After connecting, the Aircraft switch resumes that same source and area during this visit. Moving the globe does not change the requested area.</p>
+        <form id="globeAreaForm">
+          <h3>Load an aircraft area</h3>
+          <p class="help">Choose a region anywhere on Earth. Loading sends these rounded coordinates, radius and your IP address to the selected provider. Panning and zooming send nothing.</p>
+          <button id="globeUseCenter" type="button">Use map centre</button>
+          <div class="coordinate-fields"><div><label for="globeAreaLat">Latitude (° north)</label><input id="globeAreaLat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></div><div><label for="globeAreaLon">Longitude (° east)</label><input id="globeAreaLon" type="number" min="-180" max="180" step="any" inputmode="decimal" required></div></div>
+          <label for="globeProvider">Aircraft provider</label><select id="globeProvider"><option value="avioadsb">AvioADSB</option><option value="adsbfi">adsb.fi · experimental / unverified</option></select>
+          <label for="globeRange">Ground radius</label><select id="globeRange"><option value="25">25 nautical miles · 46 km</option><option value="50" selected>50 nautical miles · 93 km</option><option value="100">100 nautical miles · 185 km</option></select>
+          <p id="globeProviderHelp" class="help"></p>
+          <button id="globeLoadArea" type="submit" class="primary">Load this area</button>
+        </form>
+        <details id="globeReceiverSettings"><summary>Connect your own permitted receiver</summary>
+          <form id="globeReceiverForm">
+            <p class="help">For whole-network or broader coverage, connect an HTTPS JSON endpoint you own or are allowed to access. It must permit browser CORS. No proxy, cookies, credentials or coordinates are added. Coverage comes from that source and is not independently verified. Responses larger than 32 MiB or 60,000 records are rejected.</p>
+            <label for="globeReceiverURL">HTTPS JSON endpoint</label><input id="globeReceiverURL" type="url" required placeholder="https://receiver.example/aircraft.json" autocomplete="off" spellcheck="false">
+            <label for="globeReceiverSchema">Timestamp and JSON format</label><select id="globeReceiverSchema" required><option value="readsb-v2">readsb v2 · now in milliseconds, ac array</option><option value="readsb-aircraft-json">readsb aircraft.json · now in seconds, aircraft array</option></select>
+            <label for="globeReceiverCoverage">Coverage description (optional)</label><input id="globeReceiverCoverage" type="text" maxlength="100" placeholder="My receiver network">
+            <p class="help">Do not paste passwords or access tokens into the URL. Pressing Connect explicitly contacts this endpoint; it may receive your IP. There is no automatic provider switch.</p>
+            <button id="globeConnectReceiver" type="submit" class="primary">Connect receiver</button>
+          </form>
+        </details>
+        <section class="methods"><h3>Satellite data</h3><p id="globeSatelliteDetails" class="help">Satellite layer off.</p><p class="help">CelesTrak stations + visual catalogue, propagated with satellite.js SGP4. Geographic subpoints are shown; altitude and symbol size are not to scale. This is not a complete satellite catalogue or a visibility prediction.</p></section>
+        <section class="methods"><h3>Map &amp; report limits</h3><p class="help">Low-resolution coastlines show geography, not roads or borders for navigation. Trails use only received or calculated samples from this session. Aircraft reports expire; missing reports do not establish an empty sky.</p><p id="globeAttribution" class="help">Land: Natural Earth, public domain. Projection: d3-geo (ISC). Aircraft sources are named with each connection.</p></section>
+      </section>
+    </div>
+  </aside>
+</main>
+<script type="module" src="js/globe.js"></script>
+</body>
+</html>

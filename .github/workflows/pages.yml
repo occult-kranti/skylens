@@ -41,6 +41,8 @@ jobs:
         run: node tests/browser.mjs
       - name: Nearby tracking and permission journeys
         run: node tests/browser-nearby.mjs
+      - name: Globe navigation, global feed and gesture journeys
+        run: node tests/browser-globe.mjs
       - name: Keep browser verification evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -121,6 +123,8 @@ jobs:
                 for (const id of ['toggleSatellites', 'togglePlanes', 'planeConsent']) {
                   if (!html.includes('id="' + id + '"')) throw new Error('Published nearby controls are missing: ' + id);
                 }
+                const globe = await fetch(new URL('globe.html', base), { signal: AbortSignal.timeout(10000) });
+                if (!globe.ok || !(await globe.text()).includes('id="globeCanvas"')) throw new Error('Published globe route is unavailable.');
                 verified = true;
                 console.log('Verified Pages release ' + release.commit + ' at ' + base.href);
                 break;

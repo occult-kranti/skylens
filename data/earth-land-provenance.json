@@ -1,0 +1,23 @@
+{
+  "name": "Natural Earth 1:110m land",
+  "sourceRelease": "4.1.0 GeoJSON (maintainer file commit)",
+  "sourceURL": "https://github.com/nvkelso/natural-earth-vector/blob/693f11422f4e08d2da4566b854dda53eb7c39fb3/geojson/ne_110m_land.geojson",
+  "sourceCommit": "693f11422f4e08d2da4566b854dda53eb7c39fb3",
+  "sourceFile": "geojson/ne_110m_land.geojson",
+  "sourceBlob": "04811d72fff2701ec67587e30ad8942675b511e3",
+  "retrieved": "2026-10-05",
+  "license": "Public domain",
+  "licenseURL": "https://www.naturalearthdata.com/about/terms-of-use/",
+  "licenseFile": "earth-land-LICENSE.md",
+  "licenseBlob": "9dfbc3d55a4ab1dd758c253b2ee339888f632889",
+  "licenseSHA256": "2631b5b39b6d1acc56de75235109b5af2dbb4b0ac5a127b6f06185977247fd4b",
+  "attribution": "Made with Natural Earth.",
+  "bytes": 138160,
+  "sha256": "9e0729ee253ca7d7a5c4ae9395fb1902264c5377c52e224d13dd85010e2835d9",
+  "features": 127,
+  "rings": 128,
+  "coordinates": 5143,
+  "modifications": "None; byte-for-byte upstream GeoJSON and license.",
+  "units": "GeoJSON [longitude, latitude] degrees; coarse display coastline.",
+  "limitations": "Small-scale cartographic generalization; not street, terrain, boundary, air-navigation or GPS-accuracy data. Coordinates are drawn on a spherical display globe, while aircraft geometry remains WGS84."
+}
