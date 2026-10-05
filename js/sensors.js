@@ -50,7 +50,9 @@ export function getLocation(timeoutMs = 9000) {
     navigator.geolocation.getCurrentPosition(
       (p) => resolve(Number.isFinite(p.coords.latitude) && Number.isFinite(p.coords.longitude)
         && Math.abs(p.coords.latitude) <= 90 && Math.abs(p.coords.longitude) <= 180
-        ? { lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, source: 'gps' } : null),
+        ? { lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, source: 'gps',
+          ...(Number.isFinite(p.coords.altitude) && p.coords.altitude >= -500 && p.coords.altitude <= 10000 ? { heightM: p.coords.altitude } : {}),
+          ...(Number.isFinite(p.coords.altitudeAccuracy) && p.coords.altitudeAccuracy >= 0 ? { heightAccuracyM: p.coords.altitudeAccuracy } : {}) } : null),
       () => resolve(null),
       { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 60000 },
     );

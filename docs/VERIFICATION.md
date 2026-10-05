@@ -1,3 +1,16 @@
+# Nearby tracking candidate verification — October 5, 2026
+
+Owning repo: occult-kranti/skylens; baseline published`dcaebfbf92c67c15d0cedb7c46c888e565165f88`. Workbench Pages source independently reports`workflow`; no companion runtime changes in this release. Publication identity and workflow result will be attached to the release PR and this release's live`release.json`. Historical records below are prior checkpoints.
+
+- Full`npm test` passed on Node24.19.0/Linux, including new13 aircraft groups,17 satellite groups and nearby unit-vector/selection tests, plus all existing astronomy, names, observing, sensors, feeds, rendering and handoff checks. The updated npm command and CI run all of these.
+- Independent WGS84 numeric reference cases and published Vallado near/deep-space vectors pass. Ten Vallado component samples reproduce the reference to maximum4.92×10⁻⁹km; this is algorithm reproduction, not orbital prediction accuracy. Four solar-altitude cross-checks against Astronomy Engine differ by≤0.0023°. Satellite tests also passed under Pacific/Honolulu.
+- Existing real-Chromium regression suite:12journey groups passed under/skylens/, including320×568,390×844,844×390,1365×900 and640×512 DPR2reflow; denial, motion/camera lifecycle, Hindi/search/saved/location/time/Tools and mock provider failure.
+- Nearby real-Chromium suite:6journey groups passed,17screenshots at320×568,390×844,844×390,1440×1000. All8layout measurements had no horizontal overflow; primary switches were at least106×44px and hit-testable. Real SGP4 with mocked OMM; nonempty aircraft fixtures; consent/cancel, range, source change/re-consent,403/429, request cancellation, background/simulation pause,20s sky expiry and60s report expiry. Camera was never implicitly opened.
+- Browser integration found a raw-aircraft kind/name mismatch; repaired before passing. A short-screen simulated-state banner was restored; below-horizon plane guidance disabled. The single visual repair moved open-panel notices out of the persistent switches; both suites passed again. A targeted follow-up asserts the legacy aircraft status says off after disabling. Independent numerical/lifecycle review found no remaining material issue in its bounded scope.
+- Actual provider delivery is separate: CelesTrak stations/visual OMM200with23/156records and valid epochs; AvioADSB200with current empty London25NMpayload. Alternative provider browserfetches failed; optionalfiHTTPdiagnostic403. No bypass, repeated polling diagnostic or private coordinates. Details/artifacts:docs/evidence/nearby and [provider matrix](aircraft-nearby-sources.md).
+
+Automated/mocked nonempty tracks do not prove an actual nonempty live feed, optical identity, physical camera alignment, satellite brightness, terrain/cloud visibility or complete aircraft coverage. iOS/Android field checks, screen-reader use and realphoneFPS/battery remain pending. The roughly20-minute Avio anonymous daily polling allowance remains a material limit. The candidate retains local astronomy/manual fallback during feed errors; first-load offline support is not promised.
+
 # Release verification — 2026-10-03
 
 ## Auto AR and observatory redesign — October 5, 2026

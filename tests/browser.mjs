@@ -48,7 +48,7 @@ try {
     const context = await browser.newContext({ viewport, deviceScaleFactor, reducedMotion: 'reduce', serviceWorkers: 'block' });
     const unexpected = [], errors = [], badResponses = [], satelliteRequests = [];
     const isSatelliteRequest = url => url.origin === 'https://celestrak.org' && url.pathname === '/NORAD/elements/gp.php' &&
-      ['stations', 'visual'].includes(url.searchParams.get('GROUP')) && url.searchParams.get('FORMAT') === 'tle';
+      ['stations', 'visual'].includes(url.searchParams.get('GROUP')) && url.searchParams.get('FORMAT')?.toLowerCase() === 'json';
     await context.route('**/*', route => {
       const url = new URL(route.request().url());
       if (url.origin === origin || ['data:', 'blob:'].includes(url.protocol)) return route.continue();
@@ -641,7 +641,8 @@ try {
       await waitText(page, '#toolsTime', 'Live');
       await waitText(page, '#toolsLocation', 'Demo: New York');
       assert.equal(satelliteRequests.length, 0, 'opening Tools does not request an external feed');
-      await page.locator('#trafficDetails > summary').click();
+      await page.locator('#openTrafficFromTools').click();
+      if (!await page.locator('#trafficDetails').evaluate(el => el.open)) await page.locator('#trafficDetails > summary').click();
       await reachable(page, '#refreshSatellites');
       await page.locator('#refreshSatellites').click();
       await page.locator('#refreshSatellites[aria-busy="false"]').waitFor();

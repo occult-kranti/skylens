@@ -1,0 +1,43 @@
+{
+  "baseline": {
+    "remoteRevision": "dcaebfbf92c67c15d0cedb7c46c888e565165f88",
+    "localRevision": "e1391422a72fdd4774d6ba856d733f23ae6a0c24",
+    "groups": {
+      "html_css": {
+        "files": 2,
+        "rawBytes": 42508,
+        "sumGzipBytes": 12257
+      },
+      "app_js": {
+        "files": 15,
+        "rawBytes": 177783,
+        "sumGzipBytes": 59955
+      },
+      "vendors": {
+        "files": 18,
+        "rawBytes": 501346,
+        "sumGzipBytes": 135614
+      }
+    }
+  },
+  "candidate": {
+    "measurement": "Python gzip.compress(mtime=0), individual-file sums; static source sizes, not HTTP waterfall",
+    "groups": {
+      "html_css": {
+        "files": 2,
+        "rawBytes": 47814,
+        "sumGzipBytes": 13422
+      },
+      "app_js": {
+        "files": 17,
+        "rawBytes": 226517,
+        "sumGzipBytes": 75240
+      },
+      "vendors": {
+        "files": 23,
+        "rawBytes": 476230,
+        "sumGzipBytes": 126002
+      }
+    }
+  }
+}

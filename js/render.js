@@ -233,10 +233,13 @@ export function createRenderer(canvas) {
         const p = proj(s.alt, s.az);
         if (!p) continue;
         ctx.fillStyle = PAL.sat;
+        ctx.globalAlpha = s.visibility && !s.visibility.candidate ? .58 : 1;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y - 4.5); ctx.lineTo(p.x + 4, p.y + 3); ctx.lineTo(p.x - 4, p.y + 3);
-        ctx.closePath(); ctx.fill();
-        if (scene.layers.labels) label(s.name, p.x, p.y - 8, PAL.sat, 10, 15);
+        ctx.closePath();
+        if (scene.cameraActive) { ctx.strokeStyle = PAL.markerEdge; ctx.lineWidth = 3; ctx.stroke(); }
+        ctx.fill(); ctx.globalAlpha = 1;
+        if (scene.layers.labels) label(s.name, p.x, p.y - 8, PAL.sat, 10, s.noradId === '25544' ? 42 : 32);
         drawn.push({ x: p.x, y: p.y, r: 14, kind: 'satellite', data: s });
       }
     }
@@ -246,12 +249,20 @@ export function createRenderer(canvas) {
       for (const pl of scene.planes) {
         const p = proj(pl.alt, pl.az);
         if (!p) continue;
-        ctx.strokeStyle = PAL.plane; ctx.lineWidth = 1.6;
+        const next = pl.next && proj(pl.next.alt, pl.next.az);
+        const movement = next && Math.hypot(next.x - p.x, next.y - p.y) > .3 ? Math.atan2(next.y - p.y, next.x - p.x) + Math.PI / 2 : 0;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(movement);
+        ctx.globalAlpha = pl.positionMode === 'estimate-paused' ? .6 : 1;
         ctx.beginPath();
-        ctx.moveTo(p.x, p.y - 5); ctx.lineTo(p.x + 5, p.y); ctx.lineTo(p.x, p.y + 5); ctx.lineTo(p.x - 5, p.y);
-        ctx.closePath(); ctx.stroke();
-        const altTxt = pl.altFt != null ? ` ${Math.round(pl.altFt / 100) * 100 >= 1000 ? (Math.round(pl.altFt / 100) / 10).toFixed(1) + 'k' : pl.altFt}ft` : '';
-        if (scene.layers.labels) label(pl.flight + altTxt, p.x, p.y - 8, PAL.plane, 10, 15);
+        // A small aircraft-like direction marker, independent of physical size.
+        // Rotation follows its projected short motion sample, not compass track
+        // directly (which would be wrong for a rolled camera).
+        ctx.moveTo(0, -7); ctx.lineTo(2, -1); ctx.lineTo(7, 3); ctx.lineTo(2, 2);
+        ctx.lineTo(2, 6); ctx.lineTo(-2, 6); ctx.lineTo(-2, 2); ctx.lineTo(-7, 3); ctx.lineTo(-2, -1); ctx.closePath();
+        ctx.strokeStyle = PAL.markerEdge; ctx.lineWidth = 3.5; ctx.stroke();
+        ctx.strokeStyle = PAL.plane; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+        const reportAge = Number.isFinite(pl.positionAgeMs) ? ` · ${Math.floor(pl.positionAgeMs / 1000)}s` : '';
+        if (scene.layers.labels) label(pl.flight + reportAge, p.x, p.y - 10, PAL.plane, 10, 40);
         drawn.push({ x: p.x, y: p.y, r: 14, kind: 'plane', data: pl });
       }
     }

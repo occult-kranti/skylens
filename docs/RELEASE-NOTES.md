@@ -1,3 +1,13 @@
+# Nearby satellites and aircraft — 2026-10-05
+
+- Persistent Satellites/Planes on/off buttons and Nearby status, with44px mobile targets, one consent flow per provider/visit,25/50/100NM aircraft ground radius and explicit availability/quota states.
+- Locally calculated satellite directions now use pinned MIT satellite.js7.1.0 and current CelesTrak OMM JSON. Sunlight/twilight filtering, orbital epoch, distance and approximate visibility reasons accompany the existing age checks and two-hour request policy.
+- Aircraft use WGS84 observer geometry, explicit geometric/pressure altitude labels and report-age limits. Motion estimates stop after15s; sky markers/guidance expire after20s, list reports after60s. No silent provider fallback.
+- Direction-space interpolation, selected-target marker priority and up to three angular candidates reuse the camera/manual projection. No visual recognition or camera upload.
+- AvioADSB current browser delivery verified with a valid empty response; anonymous quota can limit continuous use to about20min/day. adsb.fi remains experimental after failed delivery checks. Physical phone alignment and nonempty live aircraft coverage are not certified.
+
+See [nearby roadmap/evidence](2026-10-05-nearby-tracking.md), [methods](satellite-nearby-methods.md), [providers](aircraft-nearby-sources.md) and [verification](VERIFICATION.md). Historical milestones follow.
+
 # Auto AR and observatory controls — 2026-10-05
 
 - Auto AR follows the phone with or without camera video. Motion and camera permissions, denial, cancellation and cleanup are independent; camera never restarts automatically after backgrounding.

@@ -1,0 +1,33 @@
+{
+  "measuredAt": "2026-10-05T22:42:59.705Z",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "arch": "x64",
+  "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+  "fixture": {
+    "width": 390,
+    "height": 844,
+    "targets": 1000,
+    "iterations": 200,
+    "rounds": 9,
+    "candidates": 336,
+    "labels": 45
+  },
+  "millisecondsPerProjectionAndLayout": {
+    "median": 0.07150819499999997,
+    "min": 0.06471509999999996,
+    "max": 0.07988540499999999,
+    "samples": [
+      0.07988540499999999,
+      0.078099755,
+      0.06596386499999994,
+      0.07150819499999997,
+      0.075004895,
+      0.07188265,
+      0.06870836999999995,
+      0.06471509999999996,
+      0.06791646999999998
+    ]
+  },
+  "limitations": "Node CPU only: fixed-width labels, no rasterization, DOM, sensors, network, ephemeris, SGP4 or physical phone. Same fixture and environment required for comparison."
+}
