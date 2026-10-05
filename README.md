@@ -2,6 +2,8 @@
 
 A camera-first, sensor-based sky overlay with a manual sky explorer. Camera frames stay on the device. Labels are calculated from your location, time and phone orientation; this is **not image recognition**.
 
+**Live application:** [https://occult-kranti.github.io/skylens/](https://occult-kranti.github.io/skylens/)
+
 ## Use the app
 
 Enable camera, choose your location, and point toward the sky. Use **Align** to correct heading and pitch and estimate your camera’s diagonal field of view. Phone compasses are imperfect: magnetic north, local interference and browser sensor conventions affect alignment. Manual drag, keyboard arrows and object search remain available without hardware permissions.
@@ -40,13 +42,13 @@ Catalogue star coordinates are J2000 rotated with precession/nutation; proper-mo
 
 Use the Sky **Show Hindi / Hide Hindi** button to show or hide Hindi labels directly. The choice is remembered and stays in sync with Settings. Settings → Object names offers हिन्दी + English (default), हिन्दी, or English. Search accepts English, Hindi and reviewed Romanized aliases. Hindi planet names and 42 curated star labels are available; names outside that curated set keep their original catalogue spelling. Traditional aliases and transliterations are identified in object details. See [the naming sources](docs/hindi-names.md).
 
-Explore separates Tonight and Solar system views. Select a supported object for next rise/set/upper-transit times at the selected UTC instant/location. Settings can save up to 12 named observing locations; Saved reuses/removes them. Tools opens the existing Workbench calculators and optional live-feed controls. The [October 5 milestone](docs/2026-10-05-hindi-mobile.md) records implementation and verification; first-time Pages administration remains a separate publishing gate.
+Explore separates Tonight and Solar system views. Select a supported object for next rise/set/upper-transit times at the selected UTC instant/location. Settings can save up to 12 named observing locations; Saved reuses/removes them. Tools opens the existing Workbench calculators and optional live-feed controls. The [October 5 milestone](docs/2026-10-05-hindi-mobile.md) records implementation and verification; GitHub Pages publication is verified; see the deployment record below.
 
 ## Human action checklist
 
 This list distinguishes required setup from optional expansion. No account or API key is needed for the current locally calculated stars, planets, constellations, object events or solar-system view. The current satellite and aircraft feeds are public, but availability and quotas are outside this application's control. Never paste private tokens into source files, GitHub Pages assets or public issues.
 
-- [ ] **Required to publish SkyLens — repository administrator:** open [Settings → Pages](https://github.com/occult-kranti/skylens/settings/pages) and select **GitHub Actions** as Source. GitHub has rejected automatic first-time creation with `Resource not accessible by integration`. After saving, rerun the failed deploy job. Confirm the site's `release.json` matches the workflow SHA before calling it live. No new account or paid plan was requested.
+- [x] **SkyLens Pages setup and first publication completed:** GitHub Actions is enabled as the Pages source. [Deployment attempt 2](https://github.com/occult-kranti/skylens/actions/runs/37329557778/attempts/2) succeeded on October 5, 2026, and the live release identity matched `367f6ee8b5ea63478e61f07e17860324ad3097bb`. The earlier administration error is resolved. Future main releases run the same verification and deployment workflow; [release.json](https://occult-kranti.github.io/skylens/release.json) records the published commit.
 - [ ] **Recommended hosting cleanup — Workbench administrator:** choose GitHub Actions in [the companion Pages settings](https://github.com/occult-kranti/astrology-sim-ant/settings/pages) to stop its legacy branch publisher from competing with the validated workflow.
 - [ ] **Required for a phone-alignment claim — device tester:** on iOS Safari and Android Chrome, allow camera/motion from the app's buttons, choose your actual location, calibrate against a known object, and test portrait/landscape, background/resume and stop/restart. Record OS/browser and measured error using [the checklist](docs/camera-methods.md). Browser mocks do not complete this step.
 - [ ] **Language/accessibility review — Hindi reader and assistive-technology tester:** review editorial transliterations and mixed-script pronunciation, large text, focus and screen-reader order. Supported aliases have sources; they are not a universal Indian sky-name standard.

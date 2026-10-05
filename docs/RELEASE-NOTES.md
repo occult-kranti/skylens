@@ -8,7 +8,7 @@
 - Aircraft uses truthful combined position age, expires stale reports, separates receipt/provider/position timestamps and stops at quota. No private key, paid account or new data recipient was added.
 - README includes concrete Pages administrator, device, Hindi/accessibility and optional provider-account actions. [API delivery](tracking-apis.md) has actual Chromium evidence and explicitly bounded coverage.
 
-Calculation engines remain Astronomy Engine 2.1.19 and satellite.js 4.1.4. Sky projection is sensor-based; physical-phone and screen-reader validation remain pending. Current CI/merge/publication evidence is linked from [PR #6](https://github.com/occult-kranti/skylens/pull/6); Pages first-time administrator setup is a separate unresolved gate.
+Calculation engines remain Astronomy Engine 2.1.19 and satellite.js 4.1.4. Sky projection is sensor-based; physical-phone and screen-reader validation remain pending. Current CI/merge/publication evidence is linked from [PR #6](https://github.com/occult-kranti/skylens/pull/6); Pages is live after successful run 37329557778 attempt 2; first-time administrator setup is resolved.
 
 # Camera-first release — 0.3.0
 
@@ -22,4 +22,4 @@ Calculation engines remain Astronomy Engine 2.1.19 and satellite.js 4.1.4. Sky p
 
 Full Node and real mobile/desktop Chromium gates passed; screenshot findings were repaired and rechecked before PR #5 merged. See VERIFICATION.md for commit/workflow/deployment evidence. Physical alignment and assistive-technology checks remain pending.
 
-Publishing status: implementation is merged; first-time SkyLens Pages creation is blocked by GitHub administration permissions. See VERIFICATION.md for the exact error and the single setup step. The companion Workbench release is live.
+Publishing status: both applications are live. SkyLens first-time setup was initially blocked by administration permissions, then resolved on October 5; see VERIFICATION.md for the successful deployment evidence.
