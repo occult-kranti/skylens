@@ -21,6 +21,25 @@ export function createUI(handlers = {}) {
   let locationSignature = '', lastNameMode = 'bilingual', latestTonight = null;
   let detailRequest = 0;
   let toastTimer = null;
+  const consolePanel = $('console');
+  let chromeObserver = null;
+  let chromeFrame = null;
+  function measureChrome() {
+    const root = document.documentElement.style;
+    root.setProperty('--console-height', `${Math.ceil(consolePanel.getBoundingClientRect().height)}px`);
+    root.setProperty('--console-width', `${Math.ceil(consolePanel.getBoundingClientRect().width)}px`);
+    root.setProperty('--controls-height', `${Math.ceil($('viewControls').getBoundingClientRect().height)}px`);
+    root.setProperty('--header-height', `${Math.ceil(document.querySelector('.telemetry').getBoundingClientRect().bottom)}px`);
+  }
+  function scheduleChromeMeasurement() {
+    if (chromeFrame !== null) return;
+    chromeFrame = requestAnimationFrame(() => { chromeFrame = null; measureChrome(); });
+  }
+  if (typeof ResizeObserver === 'function') {
+    chromeObserver = new ResizeObserver(scheduleChromeMeasurement);
+    [consolePanel, $('viewControls'), document.querySelector('.telemetry')].forEach(element => chromeObserver.observe(element));
+  }
+  window.addEventListener('resize', scheduleChromeMeasurement);
   const button = (text, action, className) => {
     const el = node('button', text, className); el.type = 'button';
     el.addEventListener('click', action); return el;
@@ -38,7 +57,8 @@ export function createUI(handlers = {}) {
     $('dockContent').hidden = !dockOpen;
     $('dockHandle').setAttribute('aria-expanded', String(dockOpen));
     $('dockLabel').textContent = dockOpen ? 'Close tools' : 'Explore & tools';
-    if (dockOpen) card.hidden = true;
+    if (dockOpen) { card.hidden = true; $('viewStatus').open = false; }
+    measureChrome();
   }
   $('dockHandle').addEventListener('click', () => setDock(!dockOpen));
   const tabs = [...dock.querySelectorAll('.tabs > [role="tab"]')];
@@ -118,14 +138,36 @@ export function createUI(handlers = {}) {
     if (camera === 'on' || camera === 'starting') handlers.stopCamera?.();
     else handlers.startCamera?.();
   });
+  $('trackingToggle').addEventListener('click', () => handlers.toggleTracking?.());
+  function trackingState({ status = 'off', message = '', active = false, requested = false, source = '' } = {}) {
+    const control = $('trackingToggle');
+    control.disabled = false;
+    control.setAttribute('aria-pressed', String(!!requested));
+    control.setAttribute('aria-busy', String(status === 'requesting'));
+    control.textContent = status === 'requesting' ? 'Cancel Auto AR' : status === 'paused' ? 'Resume Auto AR' : requested ? 'Stop Auto AR' : ['denied', 'error'].includes(status) ? 'Retry Auto AR' : 'Auto AR';
+    $('viewControls').dataset.tracking = status;
+    $('trackingStatus').dataset.status = status;
+    $('trackingStatus').dataset.source = source || '';
+    const titles = { off:'Manual sky', requesting:'Requesting motion', waiting:'Waiting for motion', tracking:'Following phone', stale:'Motion needs attention', denied:'Motion denied', unsupported:'Motion unavailable', paused:'Tracking paused', error:'Tracking unavailable' };
+    $('viewMode').textContent = titles[status] || (active ? 'Following phone' : 'Manual sky');
+    $('trackingStatus').textContent = message || (status === 'off' ? 'Auto AR follows your phone using motion sensors. Or drag the sky and use arrow keys to explore manually.' : titles[status] || 'Manual exploration remains available.');
+    const motionState = status === 'off' ? 'off' : ['denied', 'error'].includes(status) ? 'err' : status === 'tracking' && active && source === 'absolute' ? 'ok' : 'warn';
+    statusDot('motion', motionState, `Motion: ${message || titles[status] || status}${source ? ` (${source})` : ''}`);
+    if (['stale', 'denied', 'unsupported', 'error'].includes(status)) $('viewStatus').open = true;
+    measureChrome();
+  }
   function cameraState({ status = 'off', message = '' } = {}) {
     camera = status;
     const control = $('cameraToggle');
     control.disabled = false;
+    control.setAttribute('aria-pressed', String(status === 'on'));
     control.textContent = status === 'on' ? 'Stop camera' : status === 'starting' ? 'Cancel camera' : status === 'error' ? 'Retry camera' : status === 'paused' ? 'Resume camera' : 'Enable camera';
     control.setAttribute('aria-busy', String(status === 'starting'));
-    $('cameraStatus').textContent = message || ({ on: 'Camera on · calculated sky overlay', off: 'Manual sky · camera is off', starting: 'Starting camera and motion…', paused: 'Camera paused. Resume when ready.', error: 'Camera unavailable. You can still explore manually.' }[status] || status);
+    $('cameraMode').textContent = ({ on:'Camera on', off:'Camera off', starting:'Camera starting', paused:'Camera paused', error:'Camera unavailable' }[status] || 'Camera off');
+    $('cameraStatus').textContent = message || ({ on: 'Camera on · calculated sky overlay', off: 'Camera off · calculated sky background. Auto AR works without video.', starting: 'Starting camera…', paused: 'Camera paused. Resume video when ready.', error: 'Camera unavailable. The calculated sky remains available.' }[status] || status);
     $('viewControls').dataset.camera = status;
+    if (status === 'error') $('viewStatus').open = true;
+    measureChrome();
   }
   const dots = { tle: $('dotTle'), adsb: $('dotAdsb'), cam: $('dotCam'), motion: $('dotMotion') };
   const statuses = { tle: $('tleStatus'), adsb: $('adsbStatus'), cam: $('camFeedStatus'), motion: $('motionFeedStatus') };
@@ -215,6 +257,7 @@ export function createUI(handlers = {}) {
     returnFocus = trigger;
     returnPanel = dockOpen ? returnFocus?.closest('[data-panel]')?.dataset.panel || null : null;
     returnObjectKey = returnFocus?.closest('[data-object-key]')?.dataset.objectKey || null;
+    $('viewStatus').open = false;
     setDock(false); card.replaceChildren();
     const close = button('Close', closeInfo, 'x'); close.setAttribute('aria-label', 'Close object details');
     const heading = setName(node('h2'), d); heading.tabIndex = -1;
@@ -565,16 +608,24 @@ export function createUI(handlers = {}) {
   function onboarding() {
     return new Promise(resolve => {
       const dialog = $('onboard'); let finished = false;
-      const finish = choice => {
-        if (finished) return; finished = true; dialog.close(); resolve(choice); $('cameraToggle').focus();
+      const finish = (choice, focusId = 'trackingToggle') => {
+        if (finished) return; finished = true; dialog.close(); resolve(choice); $(focusId).focus();
       };
-      $('btnAR').addEventListener('click', () => { handlers.startCamera?.(); finish('started'); }, { once:true });
+      $('btnAR').addEventListener('click', () => { handlers.toggleTracking?.(); finish('started'); }, { once:true });
+      $('btnCamera').addEventListener('click', () => { handlers.startCamera?.(); finish('started', 'cameraToggle'); }, { once:true });
       $('btnManual').addEventListener('click', () => finish('manual'), { once:true });
       dialog.addEventListener('cancel', event => { event.preventDefault(); finish('manual'); }, { once:true });
-      if (!window.isSecureContext) { $('httpsWarn').hidden = false; $('btnAR').disabled = true; }
+      if (!window.isSecureContext) { $('httpsWarn').hidden = false; $('btnAR').disabled = true; $('btnCamera').disabled = true; }
       dialog.showModal();
     });
   }
   setDock(false);
-  return { toast, statusDot, telemetry, compassTape, cameraState, showInfo, skyList, searchResults, satList, planeList, tonight, bindChips, bindSettings, syncSettings, onboarding, saved, setDock, setTab, orbit:renderOrbit };
+  function dispose() {
+    chromeObserver?.disconnect();
+    window.removeEventListener('resize', scheduleChromeMeasurement);
+    if (chromeFrame !== null) cancelAnimationFrame(chromeFrame);
+    clearTimeout(toastTimer);
+    detailRequest++;
+  }
+  return { toast, statusDot, telemetry, compassTape, trackingState, cameraState, showInfo, skyList, searchResults, satList, planeList, tonight, bindChips, bindSettings, syncSettings, onboarding, saved, setDock, setTab, orbit:renderOrbit, dispose };
 }

@@ -1,5 +1,6 @@
 // render.js — canvas overlay: alt-az grid, constellation figures, stars, DSOs,
-// bodies, satellites, planes, locate guidance. Double-drawn text for legibility.
+// bodies, satellites, planes, locate guidance. Markers are readable symbols,
+// not angular diameters, resolved planetary surfaces or camera detections.
 import { vecFromAltAz, projectVec, clamp } from './astro.js';
 import { displayName } from './names.js';
 
@@ -15,22 +16,24 @@ export function fitLabel(value, maxWidth, measure) {
 
 export const PALETTES = {
   normal: {
-    grid: 'rgba(160,190,255,0.14)', gridText: 'rgba(190,205,235,0.8)', horizon: 'rgba(170,200,255,0.55)',
+    grid: 'rgba(160,190,225,0.16)', gridText: '#a6b7cf', horizon: '#a2bedb',
     star: (a) => `rgba(255,244,228,${a})`, starLabel: 'rgba(235,230,218,0.92)',
-    planet: '#ffd9a0', sun: '#ffe9b0', moon: '#e6e8f2',
-    sat: '#ffb454', plane: '#58c6ff',
-    constLine: 'rgba(140,170,255,0.30)', constLabel: 'rgba(150,180,235,0.6)', dso: 'rgba(196,170,255,0.8)',
-    highlight: '#58c6ff',
-    shadow: 'rgba(0,0,0,0.9)', crosshair: 'rgba(255,255,255,0.35)',
+    planet: '#ffca80', sun: '#ffe9b0', moon: '#e7edf5',
+    sat: '#ffca80', plane: '#71d0ff',
+    constLine: 'rgba(140,170,215,0.34)', constLabel: '#96b0d4', dso: '#c4aaff',
+    highlight: '#71d0ff',
+    shadow: 'rgba(2,7,14,0.94)', markerEdge: '#080e18', labelSurface: 'rgba(5,11,20,0.88)',
+    crosshair: 'rgba(198,216,237,0.6)',
   },
-  night: { // red-shifted: preserves dark adaptation
-    grid: 'rgba(255,70,50,0.13)', gridText: 'rgba(255,120,100,0.75)', horizon: 'rgba(255,95,70,0.5)',
+  night: { // Warm red instrument palette; display brightness still matters outdoors.
+    grid: 'rgba(230,84,62,0.14)', gridText: '#c07865', horizon: '#d58b74',
     star: (a) => `rgba(255,120,90,${a})`, starLabel: 'rgba(255,140,110,0.92)',
     planet: '#ff9a6a', sun: '#ff7a50', moon: '#ff9a80',
-    sat: '#ffb454', plane: '#ff8a70',
-    constLine: 'rgba(255,90,70,0.28)', constLabel: 'rgba(255,120,100,0.55)', dso: 'rgba(255,150,130,0.75)',
-    highlight: '#ff6a55',
-    shadow: 'rgba(0,0,0,0.95)', crosshair: 'rgba(255,120,100,0.4)',
+    sat: '#ff9a6a', plane: '#ff9b87',
+    constLine: 'rgba(235,99,73,0.30)', constLabel: '#c07865', dso: '#db947e',
+    highlight: '#ff9b87',
+    shadow: 'rgba(10,2,0,0.96)', markerEdge: '#120502', labelSurface: 'rgba(20,5,2,0.9)',
+    crosshair: 'rgba(225,130,106,0.55)',
   },
 };
 
@@ -64,37 +67,48 @@ export function createRenderer(canvas) {
   resize();
   window.addEventListener('resize', resize);
 
-  function text(str, x, y, color, size = 11, align = 'center') {
+  function text(str, x, y, color, size = 11, align = 'center', surface = false, width = 0) {
     ctx.font = labelFont(size);
     ctx.textAlign = align;
-    ctx.fillStyle = PAL.shadow; ctx.fillText(str, x + 1, y + 1);
+    if (surface) {
+      // Only selected labels and compass tags get a compact scrim over video.
+      const left = align === 'left' ? x : x - width / 2;
+      ctx.fillStyle = PAL.labelSurface; ctx.fillRect(left - 4, y - size - 3, width + 8, size + 7);
+    }
+    ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeStyle = PAL.shadow;
+    ctx.strokeText(str, x, y);
     ctx.fillStyle = color; ctx.fillText(str, x, y);
   }
 
   let PAL = PALETTES.normal;
 
   function draw(scene) {
-    PAL = scene.palette;
+    PAL = scene.palette || PALETTES.normal;
     drawn = [];
     ctx.clearRect(0, 0, w, h);
     const { basis, tanH, tanV } = scene;
-    const proj = (alt, az) => scene.horizonOnly && alt < 0 ? null
-      : projectVec(vecFromAltAz(alt, az), basis, tanH, tanV, w, h);
+    const proj = (alt, az) => {
+      if (!Number.isFinite(alt) || !Number.isFinite(az) || (scene.horizonOnly && alt < 0)) return null;
+      const point = projectVec(vecFromAltAz(alt, az), basis, tanH, tanV, w, h);
+      return point && Number.isFinite(point.x) && Number.isFinite(point.y) ? point : null;
+    };
     const labels = [];
-    const label = (str, x, y, color, size = 11, priority = 10, align = 'center') => {
+    const label = (str, x, y, color, size = 11, priority = 10, align = 'center', compass = false) => {
       ctx.font = labelFont(size);
       const key = str;
       str = fitLabel(str, w - 24, text => ctx.measureText(text).width);
       if (!str) return;
       const width = ctx.measureText(str).width;
       if (priority >= 100) { x = clamp(x, width / 2 + 10, w - width / 2 - 10); y = clamp(y, size + 10, h - 10); }
-      labels.push({ str, key, x, y, color, size, priority, align, width, height: size });
+      labels.push({ str, key, x, y, color, size, priority, align, width, height: size,
+        surface: !!scene.cameraActive && (priority >= 100 || compass) });
     };
 
     /* ---- alt-az grid ---- */
     if (scene.layers.grid) {
       ctx.lineWidth = 1;
       for (let alt = -60; alt <= 75; alt += 15) {
+        ctx.setLineDash(alt < 0 ? [2, 6] : []);
         ctx.strokeStyle = alt === 0 ? PAL.horizon : PAL.grid;
         ctx.beginPath(); let started = false;
         for (let az = 0; az <= 360; az += 4) {
@@ -102,8 +116,13 @@ export function createRenderer(canvas) {
           if (p) { started ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); started = true; }
           else started = false;
         }
-        ctx.stroke();
+        if (alt === 0) {
+          ctx.strokeStyle = PAL.shadow; ctx.lineWidth = 3; ctx.stroke();
+          ctx.strokeStyle = PAL.horizon; ctx.lineWidth = 1.25;
+        }
+        ctx.stroke(); ctx.lineWidth = 1;
       }
+      ctx.setLineDash([]);
       for (let az = 0; az < 360; az += 30) {
         ctx.strokeStyle = PAL.grid;
         ctx.beginPath(); let started = false;
@@ -114,9 +133,11 @@ export function createRenderer(canvas) {
         }
         ctx.stroke();
       }
+      const compass = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
       for (let az = 0; az < 360; az += 45) {
         const p = proj(1.5, az);
-        if (p) label(az % 90 === 0 ? 'NESW'[az / 90] : String(az), p.x, p.y - 4, PAL.gridText, az % 90 === 0 ? 13 : 10, 5);
+        if (p) label(compass[az / 45], p.x, p.y - 4, az === 0 ? PAL.highlight : PAL.horizon,
+          az % 90 === 0 ? 13 : 10, az % 90 === 0 ? 36 : 8, 'center', true);
       }
       for (let alt = 15; alt <= 75; alt += 15) {
         const p = proj(alt, scene.centerAz);
@@ -149,7 +170,7 @@ export function createRenderer(canvas) {
       for (const d of scene.dsos) {
         const p = proj(d.alt, d.az);
         if (!p) continue;
-        const rr = clamp(7 - 0.5 * (d.mag ?? 6), 2.5, 7);
+        const rr = clamp(7 - 0.5 * (Number.isFinite(d.mag) ? d.mag : 6), 2.5, 7);
         ctx.strokeStyle = PAL.dso; ctx.lineWidth = 1;
         if (d.type === 'galaxy' || d.type === 'galaxy cluster') { // ellipse marker for galaxies
           ctx.beginPath(); ctx.ellipse(p.x, p.y, rr + 2, rr * 0.6, 0.6, 0, 6.2832); ctx.stroke();
@@ -168,10 +189,13 @@ export function createRenderer(canvas) {
       for (const s of scene.stars) {
         const p = proj(s.alt, s.az);
         if (!p) continue;
-        const r = clamp(2.7 - 0.45 * s.mag, 0.7, 3.6);
-        const a = clamp(1.05 - 0.17 * s.mag, 0.3, 1);
+        const mag = Number.isFinite(s.mag) ? s.mag : 6;
+        const r = clamp(2.7 - 0.45 * mag, 0.7, 3.6);
+        const a = clamp(1.05 - 0.17 * mag, 0.3, 1);
         ctx.fillStyle = PAL.star(a);
-        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.2832); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.2832);
+        if (scene.cameraActive) { ctx.strokeStyle = PAL.markerEdge; ctx.lineWidth = 2; ctx.stroke(); }
+        ctx.fill();
         drawn.push({ x: p.x, y: p.y, r: Math.max(12, r + 6), kind: 'star', data: s });
         if (scene.layers.labels && s.name && s.mag <= 1.6) {
           label(displayName(s, scene.nameMode), p.x, p.y - 7, PAL.starLabel, 12, 30 - s.mag);
@@ -183,18 +207,23 @@ export function createRenderer(canvas) {
     for (const b of scene.layers.bodies === false ? [] : scene.bodies) {
       const p = proj(b.alt, b.az);
       if (!p) continue;
+      // A dark keyline separates the symbol from a bright camera image. Moon
+      // illumination changes symbol brightness, not an invented limb orientation.
+      const markerRadius = b.kind === 'sun' ? 7 : b.kind === 'moon' ? 6 : 3.6;
+      ctx.strokeStyle = PAL.markerEdge; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(p.x, p.y, markerRadius, 0, 6.2832); ctx.stroke();
       if (b.kind === 'sun') {
         ctx.fillStyle = PAL.sun; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, 6.2832); ctx.fill();
-        ctx.strokeStyle = PAL.sun; ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = PAL.sun; ctx.lineWidth = 1; ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.arc(p.x, p.y, 11, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
       } else if (b.kind === 'moon') {
-        ctx.fillStyle = PAL.moon; ctx.globalAlpha = 0.35 + 0.65 * (b.phase ?? 1);
+        ctx.fillStyle = PAL.moon; ctx.globalAlpha = 0.35 + 0.65 * (Number.isFinite(b.phase) ? clamp(b.phase, 0, 1) : 1);
         ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
       } else {
         ctx.fillStyle = PAL.planet; ctx.beginPath(); ctx.arc(p.x, p.y, 3.6, 0, 6.2832); ctx.fill();
       }
       const name = displayName(b, scene.nameMode);
       const lbl = b.kind === 'moon' && b.phase != null ? `${name} ${(b.phase * 100) | 0}%` : name;
-      if (scene.layers.labels) label(lbl, p.x, p.y - 10, b.kind === 'planet' ? PAL.planet : PAL.sun, 12, 50);
+      if (scene.layers.labels) label(lbl, p.x, p.y - 12, b.kind === 'moon' ? PAL.moon : b.kind === 'sun' ? PAL.sun : PAL.planet, 12, 50);
       drawn.push({ x: p.x, y: p.y, r: 16, kind: b.kind, data: b });
     }
 
@@ -228,15 +257,22 @@ export function createRenderer(canvas) {
     }
 
     /* ---- locate highlight / edge guidance ---- */
-    if (scene.highlight) {
+    if (scene.highlight && Number.isFinite(scene.highlight.alt) && Number.isFinite(scene.highlight.az)) {
       const t = scene.highlight;
       const p = proj(t.alt, t.az);
       if (p && p.x >= 16 && p.x <= w - 16 && p.y >= 16 && p.y <= h - 16) {
-        const pulse = scene.reducedMotion ? 13 : 12 + 3 * Math.sin(performance.now() / 220);
-        ctx.strokeStyle = PAL.highlight; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
-        ctx.beginPath(); ctx.arc(p.x, p.y, pulse, 0, 6.2832); ctx.stroke();
-        ctx.setLineDash([]);
-        label(displayName(t, scene.nameMode), p.x, p.y - pulse - 6, PAL.highlight, 12, 100);
+        // Four static open corners point to the exact projected centre without
+        // drawing over it. No pulse, motion dependency, glow or extra hit target.
+        const radius = 14, corner = 5;
+        ctx.beginPath();
+        for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+          ctx.moveTo(p.x + sx * (radius - corner), p.y + sy * radius);
+          ctx.lineTo(p.x + sx * radius, p.y + sy * radius);
+          ctx.lineTo(p.x + sx * radius, p.y + sy * (radius - corner));
+        }
+        ctx.strokeStyle = PAL.shadow; ctx.lineWidth = 4; ctx.stroke();
+        ctx.strokeStyle = PAL.highlight; ctx.lineWidth = 1.5; ctx.stroke();
+        label(displayName(t, scene.nameMode), p.x, p.y - radius - 7, PAL.highlight, 12, 100);
       } else if (scene.centerAz != null) {
         // off-screen: chevron at the screen edge pointing toward the target
         const target = vecFromAltAz(t.alt, t.az);
@@ -256,15 +292,18 @@ export function createRenderer(canvas) {
     }
 
     for (const item of layoutLabels(labels, w, h)) {
-      text(item.str, item.x, item.y, item.color, item.size, item.align);
+      text(item.str, item.x, item.y, item.color, item.size, item.align, item.surface, item.width);
     }
 
     /* ---- crosshair ---- */
-    ctx.strokeStyle = PAL.crosshair; ctx.lineWidth = 1;
+    // Empty centre keeps the boresight readable without resembling another star.
     ctx.beginPath();
-    ctx.moveTo(w / 2 - 9, h / 2); ctx.lineTo(w / 2 + 9, h / 2);
-    ctx.moveTo(w / 2, h / 2 - 9); ctx.lineTo(w / 2, h / 2 + 9);
-    ctx.stroke();
+    for (const sign of [-1, 1]) {
+      ctx.moveTo(w / 2 + sign * 6, h / 2); ctx.lineTo(w / 2 + sign * 13, h / 2);
+      ctx.moveTo(w / 2, h / 2 + sign * 6); ctx.lineTo(w / 2, h / 2 + sign * 13);
+    }
+    ctx.strokeStyle = PAL.shadow; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = PAL.crosshair; ctx.lineWidth = 1; ctx.stroke();
   }
 
   function hitTest(x, y) {

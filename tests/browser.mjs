@@ -37,14 +37,15 @@ const server = createServer(async (request, response) => {
 let browser, failure;
 const completed = [];
 const browserDiagnostics = [];
+const layoutMeasurements = [];
 try {
   await new Promise((ok, no) => { server.once('error', no); server.listen(0, '127.0.0.1', ok); });
   const origin = 'http://127.0.0.1:' + server.address().port;
   const base = origin + basePath;
   browser = await chromium.launch({ headless: true,
     ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {}) });
-  async function contextFor(viewport, camera = 'denied', mockSatelliteFailure = false) {
-    const context = await browser.newContext({ viewport, reducedMotion: 'reduce', serviceWorkers: 'block' });
+  async function contextFor(viewport, camera = 'denied', mockSatelliteFailure = false, motion = 'granted', deviceScaleFactor = 1) {
+    const context = await browser.newContext({ viewport, deviceScaleFactor, reducedMotion: 'reduce', serviceWorkers: 'block' });
     const unexpected = [], errors = [], badResponses = [], satelliteRequests = [];
     const isSatelliteRequest = url => url.origin === 'https://celestrak.org' && url.pathname === '/NORAD/elements/gp.php' &&
       ['stations', 'visual'].includes(url.searchParams.get('GROUP')) && url.searchParams.get('FORMAT') === 'tle';
@@ -58,8 +59,22 @@ try {
       unexpected.push(url.href);
       return route.abort('blockedbyclient');
     });
-    await context.addInitScript(({ camera }) => {
-      window.__capabilityTest = { cameraCalls: 0, geoCalls: 0, motionCalls: 0, stopped: 0, tracks: [] };
+    await context.addInitScript(({ camera, motion }) => {
+      const orientationListeners = new Map(['deviceorientation', 'deviceorientationabsolute'].map(name => [name, new Set()]));
+      const nativeAdd = window.addEventListener.bind(window), nativeRemove = window.removeEventListener.bind(window);
+      window.addEventListener = (name, listener, options) => {
+        orientationListeners.get(name)?.add(listener); return nativeAdd(name, listener, options);
+      };
+      window.removeEventListener = (name, listener, options) => {
+        orientationListeners.get(name)?.delete(listener); return nativeRemove(name, listener, options);
+      };
+      window.__capabilityTest = { cameraCalls: 0, geoCalls: 0, motionCalls: 0, stopped: 0, tracks: [], motionActivations: [],
+        get orientationListenerCount() { return [...orientationListeners.values()].reduce((total, list) => total + list.size, 0); },
+        setHidden(hidden) {
+          Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+          document.dispatchEvent(new Event('visibilitychange'));
+        },
+      };
       Object.defineProperty(navigator, 'geolocation', { configurable: true, value: {
         getCurrentPosition(_success, error) {
           window.__capabilityTest.geoCalls++;
@@ -84,10 +99,15 @@ try {
           return stream;
         },
       } });
+      if (motion === 'unsupported') Object.defineProperty(window, 'DeviceOrientationEvent', { configurable: true, value: undefined });
       if (window.DeviceOrientationEvent) Object.defineProperty(window.DeviceOrientationEvent, 'requestPermission', {
-        configurable: true, value: async () => { window.__capabilityTest.motionCalls++; return 'granted'; },
+        configurable: true, value: () => {
+          window.__capabilityTest.motionCalls++;
+          window.__capabilityTest.motionActivations.push(navigator.userActivation.isActive);
+          return motion === 'deferred' ? new Promise(resolve => { window.__capabilityTest.resolveMotion = resolve; }) : Promise.resolve(motion);
+        },
       });
-    }, { camera });
+    }, { camera, motion });
     const page = await context.newPage();
     page.setDefaultTimeout(10000);
     page.on('pageerror', e => {
@@ -136,6 +156,45 @@ try {
       box.top >= -1 && box.bottom <= box.viewportHeight + 1 && box.hit,
     selector + ' is visible and directly reachable: ' + JSON.stringify(box));
   }
+  async function usablePanelAndControls(page, selector, label) {
+    // Let the application's measured console sizing settle. Do not scroll controls
+    // into view: that can hide an unusably small panel or displaced primary actions.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const measured = await page.evaluate(selector => {
+      const visibleRect = element => {
+        const box = element.getBoundingClientRect();
+        let left = Math.max(0, box.left), right = Math.min(innerWidth, box.right);
+        let top = Math.max(0, box.top), bottom = Math.min(innerHeight, box.bottom);
+        for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+          const style = getComputedStyle(parent), bounds = parent.getBoundingClientRect();
+          // display:contents generates no box, so its inherited overflow value
+          // cannot clip the fixed tool surfaces that remain in its DOM subtree.
+          if (style.display === 'contents') continue;
+          if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+            left = Math.max(left, bounds.left + parent.clientLeft);
+            right = Math.min(right, bounds.left + parent.clientLeft + parent.clientWidth);
+          }
+          if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+            top = Math.max(top, bounds.top + parent.clientTop);
+            bottom = Math.min(bottom, bounds.top + parent.clientTop + parent.clientHeight);
+          }
+        }
+        const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+        return { width: box.width, height: box.height, visibleWidth: Math.max(0, right - left),
+          visibleHeight: Math.max(0, bottom - top), left, right, top, bottom,
+          hit: hit === element || element.contains(hit) };
+      };
+      const panel = document.querySelector(selector);
+      return { viewport: { width: innerWidth, height: innerHeight }, panel: panel ? visibleRect(panel) : null,
+        controls: ['trackingToggle', 'cameraToggle'].map(id => ({ id, ...visibleRect(document.getElementById(id)) })) };
+    }, selector);
+    layoutMeasurements.push({ label, selector, ...measured });
+    assert.ok(measured.panel && measured.panel.visibleHeight >= 140 && measured.panel.hit,
+      label + ' provides at least 140 CSS px of visible panel viewport: ' + JSON.stringify(measured));
+    for (const control of measured.controls) assert.ok(control.width >= 24 && control.height >= 24 &&
+      control.visibleWidth >= control.width - 1 && control.visibleHeight >= control.height - 1 && control.hit,
+    label + ' keeps primary control ' + control.id + ' fully visible without scrolling: ' + JSON.stringify(measured));
+  }
   async function screenshot(page, label, view) {
     await page.waitForFunction(() => document.querySelector('#toasts')?.childElementCount === 0);
     await layoutCheck(page, label + ' ' + view);
@@ -153,16 +212,34 @@ try {
     return page.locator('#infocard').evaluate(el => [...el.querySelectorAll('dt')]
       .find(dt => dt.textContent === 'Altitude / azimuth')?.nextElementSibling?.textContent);
   }
+  async function trackingStatus(page, status) {
+    await page.waitForFunction(status => document.querySelector('#trackingStatus')?.dataset.status === status, status);
+  }
+  async function emitOrientation(page, alpha, beta = 90, gamma = 0, absolute = true) {
+    await page.evaluate(sample => {
+      const type = sample.absolute ? 'deviceorientationabsolute' : 'deviceorientation';
+      window.dispatchEvent(new DeviceOrientationEvent(type, sample));
+    }, { alpha, beta, gamma, absolute });
+  }
+  async function headingNear(page, expected) {
+    await page.waitForFunction(expected => {
+      const match = document.querySelector('#telAim')?.textContent.match(/(-?\d+(?:\.\d+)?)°/);
+      return match && Math.abs(((Number(match[1]) - expected + 540) % 360) - 180) <= 2;
+    }, expected);
+  }
+  // 640 CSS pixels at DPR2 emulate the layout of a 1280px desktop at200% zoom;
+  // this is a reflow equivalent, not native browser UI zoom or physical pinch testing.
   const viewports = [['small-mobile', { width: 320, height: 568 }], ['mobile', { width: 390, height: 844 }],
-    ['landscape', { width: 844, height: 390 }], ['desktop', { width: 1365, height: 900 }]];
-  for (const [label, viewport] of viewports) {
-    const { context, page, check } = await contextFor(viewport);
+    ['landscape', { width: 844, height: 390 }], ['desktop', { width: 1365, height: 900 }],
+    ['reflow-200-equivalent', { width: 640, height: 512 }, 2]];
+  for (const [label, viewport, deviceScaleFactor = 1] of viewports) {
+    const { context, page, check } = await contextFor(viewport, 'denied', false, 'granted', deviceScaleFactor);
     try {
       await page.goto(base, { waitUntil: 'domcontentloaded' });
       await page.locator('#btnAR').waitFor({ state: 'visible' });
       assert.equal(await page.evaluate(() => window.__capabilityTest.cameraCalls), 0, 'camera permission is user initiated');
       assert.equal(await page.evaluate(() => window.__capabilityTest.geoCalls), 0, 'location permission is user initiated');
-      await page.locator('#btnAR').click();
+      await page.locator('#btnCamera').click();
       await page.waitForFunction(() => window.__capabilityTest.cameraCalls === 1);
       await page.waitForFunction(() => /denied|unavailable|not allowed|permission/i.test(document.querySelector('#cameraStatus')?.textContent || ''));
       assert.equal(await page.locator('#cam').evaluate(el => el.srcObject), null, 'denied camera has no stream');
@@ -262,12 +339,14 @@ try {
       assert.equal(await page.locator('#solarView').isHidden(), true, 'solar system does not crowd observing results');
       assert.ok(await page.locator('#toasts .toast').count() <= 1, 'transient messages never stack over controls');
       await page.locator('#tonightBody').scrollIntoViewIfNeeded();
+      await usablePanelAndControls(page, '#panelExplore', label + ' observing at selected time');
       await screenshot(page, label, 'observing');
       await page.locator('#exploreSolar').click();
       await page.locator('#orbitView svg').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#observingView').isHidden(), true, 'solar and observing subviews are distinct');
       await reachable(page, '#exploreTonight');
       await page.locator('#orbitView svg').scrollIntoViewIfNeeded();
+      await usablePanelAndControls(page, '#panelExplore', label + ' solar at selected time');
       await screenshot(page, label, 'solar');
       await page.locator('#exploreSolar').press('ArrowLeft');
       assert.equal(await page.locator('#exploreTonight').getAttribute('aria-selected'), 'true', 'Explore subviews support arrow-key navigation');
@@ -282,6 +361,7 @@ try {
       assert.equal(await page.locator('#objectEvents dt').count(), 0, 'a constellation figure does not invent single-object rise/set events');
       await page.locator('#infocard').getByRole('button', { name: /^Save object$/ }).click();
       await page.locator('#infocard h2').scrollIntoViewIfNeeded();
+      await usablePanelAndControls(page, '#infocard', label + ' constellation detail');
       await screenshot(page, label, 'hindi-constellation');
       await findObject(page, 'Orion', 'const:Ori:59');
       await waitText(page, '#infocard h2', 'ओरायन');
@@ -297,6 +377,7 @@ try {
       await page.locator('#infocard').getByRole('button', { name: /^Save object$/ }).click();
       await reachable(page, '#infocard [data-action="save"]');
       await page.locator('#infocard h2').scrollIntoViewIfNeeded();
+      await usablePanelAndControls(page, '#infocard', label + ' planet detail');
       await screenshot(page, label, 'hindi-object');
       if (label === 'mobile') {
         const permissions = await page.evaluate(() => ({ camera: window.__capabilityTest.cameraCalls, geo: window.__capabilityTest.geoCalls }));
@@ -304,6 +385,7 @@ try {
         await waitText(page, '#infocard h2', 'मंगल');
         await layoutCheck(page, 'rotation keeps selected Hindi object within viewport');
         await reachable(page, '#infocard [data-action="save"]');
+        await usablePanelAndControls(page, '#infocard', 'rotated planet detail');
         assert.deepEqual(await page.evaluate(() => ({ camera: window.__capabilityTest.cameraCalls, geo: window.__capabilityTest.geoCalls })), permissions,
           'rotation does not request permissions again');
         await page.setViewportSize(viewport);
@@ -327,6 +409,7 @@ try {
       await waitText(page, '#toolsLocation', '51.500');
       await waitText(page, '#toolsCalculation', 'Astronomy Engine');
       await waitText(page, '#toolsFeedStatus', 'Satellites off · Aircraft off');
+      await usablePanelAndControls(page, '#panelTools', label + ' Tools at selected time');
       assert.equal(await page.locator('#setPlanes').isChecked(), false, 'tools navigation does not enable location-sharing aircraft feed');
       await page.locator('#returnLive').click();
       await page.locator('#simulationBanner').waitFor({ state: 'hidden' });
@@ -338,6 +421,7 @@ try {
       assert.equal(await page.locator('#toggleHindiNames').getAttribute('aria-pressed'), 'true', 'direct control restores persisted Hindi-only state');
       await waitText(page, '#telPos', '51.500');
       await reachable(page, '#nameMode');
+      await usablePanelAndControls(page, '#panelSettings', label + ' Settings');
       await screenshot(page, label, 'settings-hindi');
       await tab(page, 'saved');
       assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use London roof\b/ }).count(), 1, 'saved location survives reload without duplicate rows');
@@ -347,6 +431,7 @@ try {
       assert.equal(await page.locator('#savedList [data-object-key="const:Ori:59"]').count(), 1, 'Hindi constellation favourites persist without duplicate identities');
       assert.match(await page.locator('#observationNote').inputValue(), /clear northern horizon/, 'note persisted');
       await layoutCheck(page, label + ' saved');
+      await usablePanelAndControls(page, '#panelSaved', label + ' Saved');
       check();
       completed.push(label + ': camera denial/manual, direct Sky Hindi show/hide with Settings synchronization and reload, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests');
     } catch (error) {
@@ -356,6 +441,194 @@ try {
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       })).catch(() => null) });
       await page.screenshot({ path: resolve(results, label + '-failure.png'), fullPage: true }).catch(() => {});
+      throw error;
+    } finally { await context.close(); }
+  }
+  // Native DOM orientation events with controlled permission results exercise the integration,
+  // not a real compass, physical alignment, or a platform permission sheet.
+  {
+    const { context, page, check } = await contextFor({ width: 390, height: 844 }, 'granted');
+    try {
+      await page.goto(base, { waitUntil: 'domcontentloaded' });
+      await page.locator('#btnAR').click();
+      await trackingStatus(page, 'waiting');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.cameraCalls), 0, 'Start Auto AR never requests camera access');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.motionCalls), 1);
+      assert.deepEqual(await page.evaluate(() => window.__capabilityTest.motionActivations), [true], 'motion permission is requested within the click activation');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.orientationListenerCount), 2);
+      await emitOrientation(page, 0);
+      await trackingStatus(page, 'tracking');
+      await headingNear(page, 0);
+      await emitOrientation(page, 90);
+      await headingNear(page, 270);
+      assert.equal(await page.locator('#cam').evaluate(el => el.srcObject), null);
+      await reachable(page, '#trackingToggle');
+      await screenshot(page, 'mobile', 'auto-ar-without-camera');
+      await page.locator('#cameraToggle').click();
+      await page.waitForFunction(() => !!document.querySelector('#cam')?.srcObject);
+      assert.equal(await page.evaluate(() => window.__capabilityTest.motionCalls), 1, 'adding camera keeps the established motion session');
+      await emitOrientation(page, 180);
+      await headingNear(page, 180);
+      await screenshot(page, 'mobile', 'auto-ar-camera');
+      await page.locator('#trackingToggle').click();
+      await trackingStatus(page, 'off');
+      assert.equal(await page.locator('#cam').evaluate(el => !!el.srcObject), true, 'stopping motion keeps the independently enabled camera');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.orientationListenerCount), 0);
+      await page.locator('#trackingToggle').click();
+      await trackingStatus(page, 'waiting');
+      await page.locator('#cameraToggle').click();
+      await page.waitForFunction(() => document.querySelector('#cam')?.srcObject === null);
+      assert.equal(await page.locator('#trackingToggle').getAttribute('aria-pressed'), 'true', 'stopping camera retains requested tracking');
+      await emitOrientation(page, 270);
+      await headingNear(page, 90);
+      await trackingStatus(page, 'tracking');
+      await page.locator('#sky').focus();
+      await page.keyboard.press('ArrowRight');
+      await trackingStatus(page, 'off');
+      assert.equal(await page.locator('#trackingToggle').getAttribute('aria-pressed'), 'false', 'intentional manual navigation stops following the phone');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.orientationListenerCount), 0, 'manual navigation removes both tracking listeners');
+      await emitOrientation(page, 0);
+      await page.locator('#sky').focus();
+      const manualHeading = await page.locator('#telAim').textContent();
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction(before => document.querySelector('#telAim')?.textContent !== before, manualHeading);
+      await page.locator('#trackingToggle').click();
+      await trackingStatus(page, 'waiting');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.motionCalls), 1, 'same-session restart reuses an established permission grant');
+      // Observe coordinates sent to the real main canvas, not a copy of the projection
+      // formula. A level-only fallback can keep heading correct while snapping roll.
+      await page.evaluate(() => {
+        const ctx = document.querySelector('#sky').getContext('2d');
+        const fill = ctx.fillText.bind(ctx), clear = ctx.clearRect.bind(ctx);
+        window.__projectionTrace = { frame: 0, north: null };
+        ctx.clearRect = (...args) => { window.__projectionTrace.frame++; window.__projectionTrace.north = null; return clear(...args); };
+        ctx.fillText = (text, x, y, ...args) => {
+          if (text === 'N') window.__projectionTrace.north = { x, y };
+          return fill(text, x, y, ...args);
+        };
+      });
+      await emitOrientation(page, 0);
+      await headingNear(page, 0);
+      await page.waitForFunction(() => !!window.__projectionTrace.north);
+      const levelNorth = await page.evaluate(() => window.__projectionTrace.north);
+      await page.evaluate(() => Object.defineProperty(screen.orientation, 'angle', { configurable: true, value: 90 }));
+      await emitOrientation(page, 0);
+      await page.waitForFunction(level => {
+        const trace = window.__projectionTrace, point = trace.north;
+        if (!point || trace.checkedFrame === trace.frame) return false;
+        trace.checkedFrame = trace.frame;
+        const settled = trace.previous && Math.hypot(point.x - trace.previous.x, point.y - trace.previous.y) < 0.02;
+        trace.stableFrames = settled ? (trace.stableFrames || 0) + 1 : 0;
+        trace.previous = point;
+        return trace.stableFrames >= 6 && Math.hypot(point.x - level.x, point.y - level.y) > 10;
+      }, levelNorth);
+      const rolledNorth = await page.evaluate(() => window.__projectionTrace.north);
+      await trackingStatus(page, 'stale');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.orientationListenerCount), 2, 'stale tracking can recover on a fresh sample');
+      await page.waitForFunction(frame => window.__projectionTrace.frame >= frame + 3, await page.evaluate(() => window.__projectionTrace.frame));
+      const staleNorth = await page.evaluate(() => window.__projectionTrace.north);
+      assert.ok(staleNorth && Math.hypot(staleNorth.x - rolledNorth.x, staleNorth.y - rolledNorth.y) < 1,
+        'stale motion preserves the actual rolled canvas projection: ' + JSON.stringify({ levelNorth, rolledNorth, staleNorth }));
+      await screenshot(page, 'mobile', 'auto-ar-stale-roll');
+      await page.evaluate(() => Object.defineProperty(screen.orientation, 'angle', { configurable: true, value: 0 }));
+      await emitOrientation(page, 125);
+      await trackingStatus(page, 'tracking');
+      await headingNear(page, 235);
+      await page.locator('#cameraToggle').click();
+      await page.waitForFunction(() => !!document.querySelector('#cam')?.srcObject);
+      const permissions = await page.evaluate(() => ({ camera: window.__capabilityTest.cameraCalls, motion: window.__capabilityTest.motionCalls }));
+      await page.evaluate(() => window.__capabilityTest.setHidden(true));
+      await trackingStatus(page, 'paused');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.orientationListenerCount), 0, 'backgrounding releases orientation listeners');
+      assert.equal(await page.locator('#cam').evaluate(el => el.srcObject), null, 'backgrounding releases video');
+      assert.equal(await page.evaluate(() => window.__capabilityTest.tracks.every(track => track.readyState === 'ended')), true);
+      await emitOrientation(page, 0);
+      await page.evaluate(() => window.__capabilityTest.setHidden(false));
+      await trackingStatus(page, 'waiting');
+      assert.deepEqual(await page.evaluate(() => ({ camera: window.__capabilityTest.cameraCalls, motion: window.__capabilityTest.motionCalls })), permissions,
+        'returning resumes authorized motion without prompting or restarting camera');
+      assert.equal(await page.locator('#cam').evaluate(el => el.srcObject), null);
+      await emitOrientation(page, 0);
+      await trackingStatus(page, 'tracking');
+      await headingNear(page, 0);
+      check();
+      completed.push('orientation replay: gesture grant, camera-free heading updates, independent camera start/stop, manual fallback, stale recovery, background listener/video cleanup, authorized motion-only resume');
+    } catch (error) {
+      await page.screenshot({ path: resolve(results, 'tracking-lifecycle-failure.png'), fullPage: true }).catch(() => {});
+      throw error;
+    } finally { await context.close(); }
+  }
+  {
+    const { context, page, check } = await contextFor({ width: 390, height: 844 }, 'denied');
+    try {
+      await page.goto(base, { waitUntil: 'domcontentloaded' });
+      await page.locator('#btnAR').click();
+      await trackingStatus(page, 'waiting');
+      await emitOrientation(page, 0);
+      await headingNear(page, 0);
+      await page.locator('#cameraToggle').click();
+      await page.waitForFunction(() => /denied|unavailable|not allowed|permission/i.test(document.querySelector('#cameraStatus')?.textContent || ''));
+      assert.equal(await page.locator('#cam').evaluate(el => el.srcObject), null);
+      assert.equal(await page.locator('#trackingToggle').getAttribute('aria-pressed'), 'true', 'camera denial retains requested motion');
+      await emitOrientation(page, 90);
+      await trackingStatus(page, 'tracking');
+      await headingNear(page, 270);
+      assert.equal(await page.evaluate(() => window.__capabilityTest.motionCalls), 1);
+      await screenshot(page, 'mobile', 'auto-ar-camera-denied');
+      check();
+      completed.push('camera denial leaves authorized sensor tracking active with continuing heading updates');
+    } catch (error) {
+      await page.screenshot({ path: resolve(results, 'tracking-camera-denied-failure.png'), fullPage: true }).catch(() => {});
+      throw error;
+    } finally { await context.close(); }
+  }
+  for (const motion of ['denied', 'unsupported', 'deferred']) {
+    const { context, page, check } = await contextFor({ width: 390, height: 844 }, 'granted', false, motion);
+    try {
+      await page.goto(base, { waitUntil: 'domcontentloaded' });
+      await page.locator('#btnAR').click();
+      if (motion === 'deferred') {
+        await trackingStatus(page, 'requesting');
+        await page.locator('#trackingToggle').click();
+        await trackingStatus(page, 'off');
+        await page.evaluate(() => window.__capabilityTest.resolveMotion('granted'));
+        await emitOrientation(page, 0);
+        await trackingStatus(page, 'off');
+        assert.equal(await page.locator('#trackingToggle').getAttribute('aria-pressed'), 'false');
+        assert.equal(await page.evaluate(() => window.__capabilityTest.orientationListenerCount), 0, 'a cancelled late permission result cannot attach sensors');
+        assert.equal(await page.evaluate(() => window.__capabilityTest.cameraCalls), 0);
+        await page.locator('#trackingToggle').click();
+        await trackingStatus(page, 'requesting');
+        const requestsBeforeBackground = await page.evaluate(() => window.__capabilityTest.motionCalls);
+        await page.evaluate(() => window.__capabilityTest.setHidden(true));
+        await trackingStatus(page, 'paused');
+        await page.evaluate(() => window.__capabilityTest.resolveMotion('granted'));
+        await page.evaluate(() => window.__capabilityTest.setHidden(false));
+        await trackingStatus(page, 'paused');
+        assert.equal(await page.evaluate(() => window.__capabilityTest.orientationListenerCount), 0, 'backgrounded pending permission cannot establish a resumable grant');
+        assert.equal(await page.evaluate(() => window.__capabilityTest.motionCalls), requestsBeforeBackground, 'returning does not prompt for unknown permission');
+        await page.locator('#trackingToggle').click();
+        await trackingStatus(page, 'requesting');
+        assert.equal(await page.evaluate(() => window.__capabilityTest.motionCalls), requestsBeforeBackground + 1, 'the next explicit gesture can request motion again');
+        await page.locator('#trackingToggle').click();
+        await trackingStatus(page, 'off');
+      } else {
+        await trackingStatus(page, motion);
+        assert.equal(await page.evaluate(() => window.__capabilityTest.orientationListenerCount), 0);
+        assert.equal(await page.evaluate(() => window.__capabilityTest.cameraCalls), 0);
+        await page.locator('#cameraToggle').click();
+        await page.waitForFunction(() => !!document.querySelector('#cam')?.srcObject);
+        await trackingStatus(page, motion);
+        assert.equal(await page.evaluate(() => window.__capabilityTest.cameraCalls), 1, 'camera works independently when motion is denied or unsupported');
+        await page.locator('#sky').focus();
+        const before = await page.locator('#telAim').textContent();
+        await page.keyboard.press('ArrowRight');
+        await page.waitForFunction(before => document.querySelector('#telAim')?.textContent !== before, before);
+      }
+      check();
+      completed.push('orientation ' + motion + ': explicit status, no unrequested camera, safe fallback or cancelled late grant');
+    } catch (error) {
+      await page.screenshot({ path: resolve(results, 'tracking-' + motion + '-failure.png'), fullPage: true }).catch(() => {});
       throw error;
     } finally { await context.close(); }
   }
@@ -397,7 +670,7 @@ try {
     const { context, page, check } = await contextFor({ width: 390, height: 844 }, 'granted');
     try {
       await page.goto(base, { waitUntil: 'domcontentloaded' });
-      await page.locator('#btnAR').click();
+      await page.locator('#btnCamera').click();
       await page.waitForFunction(() => !!document.querySelector('#cam')?.srcObject);
       await page.locator('#cameraToggle').click();
       await page.waitForFunction(() => document.querySelector('#cam')?.srcObject === null);
@@ -418,7 +691,7 @@ try {
   await browser?.close();
   if (server.listening) await new Promise(ok => server.close(ok));
   await writeFile(resolve(results, 'browser-results.json'), JSON.stringify({
-    timestamp: new Date().toISOString(), completed, passed: !failure, browserDiagnostics,
+    timestamp: new Date().toISOString(), completed, passed: !failure, browserDiagnostics, layoutMeasurements,
     failure: failure ? String(failure.stack || failure) : null,
     physicalDeviceAlignment: 'not tested; requires documented phone checklist',
   }, null, 2));

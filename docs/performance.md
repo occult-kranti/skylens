@@ -65,3 +65,14 @@ Direct visibility-button follow-up, same measurement method; no new dependencies
 
 - HTML + CSS: 37,632 raw bytes; 11,321 summed gzip bytes.
 - Application JS: 147,695 raw bytes; 50,599 summed gzip bytes.
+
+## Auto AR and observatory redesign cost — October 5
+
+Baseline local `7c1a54a` corresponds to published remote `9480f5df`. Same Python gzip compression (`mtime=0`), summed per file; HTML/CSS and application JS only, excluding unchanged vendor/catalogue files. These are static source sizes, not HTTP first-load measurements or mobile FPS.
+
+| Resource group | Before raw / gzip bytes | Candidate raw / gzip bytes |
+|---|---:|---:|
+| HTML + CSS | 37,632 / 11,321 | 41,648 / 12,012 |
+| Application JS | 147,695 / 50,599 | 164,731 / 55,515 |
+
+The independent motion controller adds one module (14 application modules total). No runtime dependency or font request was added. Catalogue/planet computation remains at 1 Hz and projection remains frame-driven; reduced-motion and visibility suspension remain in place. A deterministic timer test verifies that continuous motion reuses one watchdog deadline instead of creating one timer per sample. Scientific marker changes retain the existing 45-label budget and DPR cap of 2. No phone FPS, optical latency, energy or first-paint improvement is claimed.

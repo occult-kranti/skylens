@@ -6,6 +6,7 @@ import { sunEvents, moonEvents, planetEvents, activeShowers } from './events.js'
 import { initSatellites, propagateNow, satMeta } from './satellites.js';
 import { startPlanes } from './planes.js';
 import * as S from './sensors.js';
+import { createTrackingController } from './tracking.js';
 import { createRenderer, PALETTES } from './render.js';
 import { createUI } from './ui.js';
 import { displayName, searchNames, NAME_MODES } from './names.js';
@@ -109,15 +110,23 @@ export function createApplication() {
   if (qp.has('fov') && Number.isFinite(Number(qp.get('fov')))) prefs.fov = X.clamp(Number(qp.get('fov')), 30, 120);
   const state = { ...prefs, mode: 'manual', az: 200, alt: 30, sensor: null,
     bodies: [], sats: [], satelliteCatalogue: [], planes: [], planeStatus: 'off', planeAge: null, planeInfo: null, tleMeta: null,
-    highlight: null, selectedId: null, cameraStatus: 'off', savedObjects: [] };
+    highlight: null, selectedId: null, cameraStatus: 'off', trackingStatus: 'off', trackingRequested: false, savedObjects: [] };
   const canvas = $('sky'), video = $('cam'), renderer = createRenderer(canvas);
-  let cameraSession = null, orientation = null, cameraToken = 0, cameraStarting = false;
+  let cameraSession = null, cameraToken = 0, cameraStarting = false, disposed = false;
   let animation = null, clockTimer = null, aircraft = null, satelliteController = null, satelliteReady = false;
   let engine = null, snapshot = { stars: [], renderStars: [], visibleCount: 0, constellations: [], dsos: [], renderDSOs: [], bodies: [], catalogue: [] };
-  let smoothed = null, previousFrame = null, lastTelemetry = 0, lastMessage = '', lastEventsKey = '', query = '';
+  let smoothed = null, previousFrame = null, lastTelemetry = 0, lastMessage = '', lastTrackingMessage = '', lastEventsKey = '', query = '';
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const ui = createUI({ relocate, locate, startCamera: enableCamera, stopCamera: () => stopCamera('off'),
+  const ui = createUI({ relocate, locate, toggleTracking, startTracking, startCamera: enableCamera, stopCamera: () => stopCamera('off'),
     setTime, search, toggleFavourite, saveLocation, useLocation, removeLocation, objectEvents, refreshSatellites });
+  const tracking = createTrackingController({
+    onSample(sample) {
+      if (disposed || document.hidden) return;
+      state.sensor = sample; state.mode = sample.absolute ? 'ar' : 'ar-rel';
+      trackingChanged(tracking.state);
+    },
+    onState: trackingChanged,
+  });
   const observingCache = new Map();
   const dateNow = () => state.selectedTime ? new Date(state.selectedTime) : new Date();
   const cache = createSkyCache((date, loc, settings) => {
@@ -226,43 +235,73 @@ export function createApplication() {
     if (validLocation(loc)) applySettings({ loc });
     else ui.toast('Location unavailable. Enter coordinates in Settings; the demo location remains labelled.', 6000);
   }
+  function trackingChanged(snapshot) {
+    state.trackingStatus = snapshot.status; state.trackingRequested = snapshot.enabled;
+    // Silence is not evidence the phone levelled itself: retain the full last
+    // attitude (including roll) while showing a stale warning. A new session or
+    // explicit Manual clears it; stale time is never renewed by screen rotation.
+    if (!['tracking', 'stale'].includes(snapshot.status)) { state.sensor = null; state.mode = 'manual'; smoothed = null; }
+    else if (snapshot.status === 'stale') state.mode = state.sensor ? 'ar-stale' : 'manual';
+    const source = snapshot.headingSource;
+    const quality = state.sensor?.compassAcc > 20 ? 'Heading uncertainty is high. Align against a known object.' :
+      source === 'magnetic-compass' ? 'Magnetic compass direction. Use Align to correct north.' :
+      source === 'absolute-sensor' ? 'Following sensor direction. True north is not independently verified.' :
+      'Relative orientation only. Use Align against a known object.';
+    const message = snapshot.status === 'tracking' ? quality : snapshot.reason ||
+      'Drag or use arrow keys to explore. Auto AR follows the phone with or without camera.';
+    const key = [snapshot.status, snapshot.enabled, source, message].join('|');
+    if (key !== lastTrackingMessage) {
+      lastTrackingMessage = key;
+      ui.trackingState?.({ status: snapshot.status, message, active: snapshot.status === 'tracking',
+        requested: snapshot.enabled, source });
+    }
+  }
+  function startTracking() {
+    if (disposed || document.hidden) return Promise.resolve(tracking.state);
+    // The controller invokes browser permission immediately in this gesture.
+    return tracking.start();
+  }
+  function stopTracking() {
+    tracking.stop(); state.sensor = null; state.mode = 'manual'; smoothed = null;
+  }
+  function toggleTracking() {
+    if (tracking.state.enabled && tracking.state.status !== 'paused') stopTracking();
+    else return startTracking();
+  }
   function cameraStatus(status, message) {
     state.cameraStatus = status;
     if (status + message !== lastMessage) { ui.cameraState?.({ status, message }); lastMessage = status + message; }
   }
   function stopCamera(status = 'off', message = '') {
+    const wasFront = cameraSession?.facingMode === 'user';
     cameraToken++; cameraStarting = false;
-    orientation?.stop(); orientation = null;
     cameraSession?.stop(); cameraSession = null; S.stopCamera(video);
-    state.sensor = null; state.mode = 'manual'; smoothed = null;
+    // Motion has its own owner. A lens-axis transition must not blend opposite views.
+    smoothed = null;
     document.body.classList.remove('camera-on');
-    ui.statusDot('cam', 'off', 'Camera off'); ui.statusDot('motion', 'off', 'Motion stopped');
-    cameraStatus(status, message || (status === 'paused' ? 'Camera paused in background. Tap Open camera to resume.' : 'Explore by dragging, or open the camera.'));
+    ui.statusDot('cam', 'off', 'Camera off');
+    cameraStatus(status, message || (status === 'paused' ? 'Camera paused in background. Tap Enable camera to restart.' :
+      wasFront && state.trackingRequested ? 'Camera off. Auto AR now follows the rear-facing direction of the phone.' :
+      state.trackingRequested ? 'Camera off. Auto AR continues in the rendered sky.' : 'Rendered sky. Enable camera for a live backdrop.'));
   }
   function enableCamera() {
-    if (cameraStarting) return;
+    if (disposed || document.hidden || cameraStarting) return;
     stopCamera('off');
-    // This call must stay synchronous within the UI click: iOS consumes transient activation.
-    const permission = S.requestMotionPermission();
+    // Both requests begin in the user gesture. Motion denial never blocks video,
+    // and camera denial never removes a granted orientation listener.
+    if (!tracking.state.enabled || tracking.state.status === 'paused') void startTracking();
     const token = ++cameraToken; cameraStarting = true;
-    cameraStatus('starting', 'Allow motion and camera when prompted. Camera frames stay on this device.');
+    cameraStatus('starting', 'Allow camera access for a live backdrop. Frames stay on this device.');
     (async () => {
-      const result = await permission;
-      if (token !== cameraToken || document.hidden) return;
-      const session = await S.startCamera(video, { onEnded: () => stopCamera('error', 'Camera access ended. Tap Open camera to retry.') });
-      if (token !== cameraToken || document.hidden) { session.stop?.(); return; }
+      const session = await S.startCamera(video, { onEnded: () => stopCamera('error', 'Camera access ended. Auto AR remains available; tap Retry camera.') });
+      if (token !== cameraToken || document.hidden || disposed) { session.stop?.(); return; }
       cameraStarting = false;
-      if (!session.ok) { stopCamera('error', `Camera unavailable (${session.reason}). Manual exploration remains available.`); return; }
-      cameraSession = session;
+      if (!session.ok) { stopCamera('error', `Camera unavailable (${session.reason}). Auto AR and manual exploration remain available.`); return; }
+      cameraSession = session; smoothed = null;
       document.body.classList.add('camera-on'); ui.statusDot('cam', 'ok', 'Camera on; frames stay local');
-      if (result === 'granted' || result === 'not-required') {
-        orientation = S.startOrientation(sample => {
-          if (token !== cameraToken) return;
-          state.sensor = sample; state.mode = sample.absolute ? 'ar' : 'ar-rel';
-          ui.statusDot('motion', sample.absolute ? 'ok' : 'warn', sample.headingSource || 'Orientation received');
-        });
-      } else ui.statusDot('motion', 'err', 'Motion permission denied');
-      cameraStatus('on', session.facingMode === 'user' ? 'Front camera, unmirrored. Calibrate alignment in Settings.' : 'Camera on. Move the phone; use Settings to correct alignment.');
+      cameraStatus('on', session.facingMode === 'user' ?
+        'Front camera, unmirrored. Auto AR follows the front lens; camera off returns to the rear-facing sky.' :
+        'Camera on. Auto AR follows phone direction; drag to switch to manual alignment.');
     })().catch(e => { if (token === cameraToken) stopCamera('error', `Camera could not start: ${e.message || 'unknown error'}`); });
   }
 
@@ -341,28 +380,23 @@ export function createApplication() {
   }
 
   function frame(timestamp) {
-    if (document.hidden) { animation = null; return; }
+    if (disposed || document.hidden) { animation = null; return; }
     animation = requestAnimationFrame(frame);
     if (!shouldRenderFrame(timestamp, previousFrame, reducedMotion.matches)) return;
     const delta = previousFrame == null ? 16 : timestamp - previousFrame;
     previousFrame = timestamp;
     let basis, az = state.az, alt = state.alt;
-    if (state.sensor && cameraSession) {
-      const target = X.correctedAttitude(state.sensor, { headingOffset: state.headingOffset, pitchOffset: state.pitchOffset,
-        frontCamera: cameraSession.facingMode === 'user' });
+    if (state.sensor && ['tracking', 'stale'].includes(tracking.state.status)) {
+      // Screen rotation can change without a new motion event. It changes the
+      // camera basis but never refreshes the original sensor sample timestamp.
+      const screenAngle = globalThis.screen?.orientation?.angle ?? window.orientation ?? state.sensor.orient;
+      const target = X.correctedAttitude({ ...state.sensor, orient: screenAngle }, {
+        headingOffset: state.headingOffset, pitchOffset: state.pitchOffset,
+        frontCamera: cameraSession?.facingMode === 'user' });
       smoothed = X.smoothAttitude(smoothed, target, delta);
       basis = smoothed; az = basis.az; alt = basis.alt;
       state.az = az; state.alt = X.clamp(alt, -89, 89);
-      const sampleAge = performance.now() - state.sensor.receivedAt;
-      const quality = sampleAge > 3000 ? 'No recent motion update — move the phone to check.' :
-        state.sensor.compassAcc > 20 ? 'Compass uncertainty is high. Correct alignment in Settings.' :
-        state.sensor.headingSource === 'magnetic-compass' ? 'Magnetic compass; use north correction in Settings.' :
-        state.sensor.absolute ? 'Sensor heading; true north is not independently verified.' : 'Relative motion only — align a known object in Settings.';
-      cameraStatus('on', quality + (state.selectedTime ? ' Simulated sky over present camera.' : ''));
-    } else {
-      basis = X.makeBasis(az, alt);
-      if (cameraSession && !cameraStarting) cameraStatus('on', 'Camera on; no motion sample. Drag to align manually or retry motion permission.');
-    }
+    } else basis = X.makeBasis(az, alt);
     const w = renderer.width, h = renderer.height;
     const fov = X.cameraFov(state.fov, w, h, cameraSession ? video.videoWidth : w, cameraSession ? video.videoHeight : h);
     renderer.draw({ basis, ...fov, stars: snapshot.renderStars,
@@ -370,7 +404,7 @@ export function createApplication() {
       constellations: state.layers.constellations ? snapshot.constellations : null,
       dsos: state.layers.dsos ? snapshot.renderDSOs : null,
       highlight: state.highlight, layers: state.layers, palette: state.night ? PALETTES.night : PALETTES.normal,
-      centerAz: az, centerAlt: alt, horizonOnly: !!cameraSession, reducedMotion: reducedMotion.matches, nameMode: state.nameMode });
+      centerAz: az, centerAlt: alt, cameraActive: !!cameraSession, horizonOnly: !!cameraSession, reducedMotion: reducedMotion.matches, nameMode: state.nameMode });
     if (timestamp - lastTelemetry > 250) {
       lastTelemetry = timestamp;
       ui.telemetry({ loc: state.loc, az, alt, date: dateNow(), isLive: !state.selectedTime,
@@ -379,13 +413,15 @@ export function createApplication() {
     }
   }
   function resumeClock() {
-    if (document.hidden) return;
+    if (disposed || document.hidden) return;
+    tracking.resume();
     refreshSky(true); syncFeeds();
     if (!clockTimer) clockTimer = setInterval(refreshSky, 1000);
     if (!animation) animation = requestAnimationFrame(frame);
   }
   function suspend() {
-    if (cameraSession || cameraStarting || orientation) stopCamera('paused');
+    tracking.suspend();
+    if (cameraSession || cameraStarting) stopCamera('paused');
     clearInterval(clockTimer); clockTimer = null;
     cancelAnimationFrame(animation); animation = null; previousFrame = null;
     aircraft?.stop(); aircraft = null; state.planes = [];
@@ -401,6 +437,7 @@ export function createApplication() {
     if (!pointer || pointer.id !== event.pointerId) return;
     const dx = event.clientX - pointer.x, dy = event.clientY - pointer.y;
     pointer.total += Math.abs(dx) + Math.abs(dy); pointer.x = event.clientX; pointer.y = event.clientY;
+    if (pointer.total > 6 && tracking.state.enabled) stopTracking();
     if (state.mode === 'manual') {
       const fov = X.cameraFov(state.fov, canvas.clientWidth, canvas.clientHeight, canvas.clientWidth, canvas.clientHeight);
       state.az = X.norm360(state.az - dx / canvas.clientWidth * 2 * Math.atan(fov.tanH) * X.R2D);
@@ -417,7 +454,8 @@ export function createApplication() {
   });
   listen(canvas, 'pointercancel', () => { pointer = null; });
   listen(canvas, 'keydown', event => {
-    if (state.mode !== 'manual' || !event.key.startsWith('Arrow')) return;
+    if (!event.key.startsWith('Arrow')) return;
+    if (tracking.state.enabled) stopTracking();
     event.preventDefault(); const step = event.shiftKey ? 10 : 3;
     if (event.key === 'ArrowLeft') state.az = X.norm360(state.az - step);
     if (event.key === 'ArrowRight') state.az = X.norm360(state.az + step);
@@ -429,7 +467,8 @@ export function createApplication() {
   listen(window, 'pageshow', resumeClock);
   ui.bindSettings(state, applySettings); ui.bindChips(state, applySettings);
   document.body.classList.toggle('night', state.night);
-  cameraStatus('off', 'Open camera to begin. Manual exploration works without permissions.');
+  cameraStatus('off', 'Rendered sky. Camera is optional and stays off until enabled.');
+  trackingChanged(tracking.state);
   resumeClock();
   Promise.allSettled([loadStars(), loadConstellations(), loadDSOs()]).then(results => {
     if (results.some(r => r.status === 'rejected')) ui.toast('Some sky data could not load. Reload to retry.', 6000);
@@ -442,7 +481,7 @@ export function createApplication() {
   });
   if (qp.has('dock')) ui.setTab(qp.get('dock'));
   if (!qp.has('manual') && !qp.has('nointro')) ui.onboarding();
-  return { state, stop() { suspend(); gestureController.abort(); renderer.dispose?.(); } };
+  return { state, stop() { disposed = true; stopTracking(); suspend(); gestureController.abort(); ui.dispose?.(); renderer.dispose?.(); } };
 }
 
 if (globalThis.document?.getElementById('sky')) createApplication();

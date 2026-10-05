@@ -1,3 +1,13 @@
+# Auto AR and observatory controls — 2026-10-05
+
+- Auto AR follows the phone with or without camera video. Motion and camera permissions, denial, cancellation and cleanup are independent; camera never restarts automatically after backgrounding.
+- Manual drag/arrow keys cancel following. Stale sensor warnings retain full last attitude rather than incorrectly levelling the view. Session grants are not persisted across reloads.
+- Mobile bottom console and wide-screen side console put Auto AR, camera, Hindi names, search and alignment within reach. Expandable status explains uncertainty; existing Sky, Explore, Tools, Saved and Settings workflows remain available.
+- Clearer calculated horizon/cardinals, open aiming reticle, selection corners and camera label contrast preserve actual projection and Hindi label collision rules. No generated scientific imagery or visual-recognition claim.
+- New deterministic controller/graphics cases and real-browser replay cover permission races, camera-independent tracking, background cleanup and viewport changes. Physical iOS/Android alignment remains pending; see [the milestone](2026-10-05-auto-ar-roadmap.md) for final browser/publication evidence.
+
+No new calculation engine, framework, remote font, account, paid API or data recipient. Astronomy Engine 2.1.19, satellite.js 4.1.4, source catalogues and documented conventions are unchanged.
+
 # Hindi names, mobile observing and tracking — 2026-10-05
 
 - Default Hindi + English naming, optional Hindi/English modes, mixed-script search, 42 named stars and all 88 IAU constellations (89 catalogue parts). Original IDs and astronomical positions remain language-independent.

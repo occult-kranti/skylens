@@ -54,3 +54,5 @@ R1–U1 implementation is complete with local test evidence in VERIFICATION.md, 
 ## October 5 continuation
 
 The [Hindi/mobile milestone](2026-10-05-hindi-mobile.md) extends the existing product with bilingual planets/stars/all IAU constellation labels, searchable and saved constellation anchors, object-specific observing events, named places, clearer Explore/Tools screens and explicit API status. It records new user requests, owners, tests and release evidence. [Tracking research](tracking-apis.md) documents verified browser delivery and provider limits; the [README human checklist](../README.md#human-action-checklist) identifies exact administrator, device and optional provider actions.
+
+The subsequent [Auto AR and observatory redesign milestone](2026-10-05-auto-ar-roadmap.md) separates motion from camera permissions and lifecycle, adds camera-off phone following, and redesigns the mobile/desktop controls and scientific sky graphics. Its own bounded review, tests, measurements and publication evidence distinguish it from the earlier releases.

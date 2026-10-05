@@ -16,26 +16,37 @@
   <div id="backdrop" aria-hidden="true"></div>
   <video id="cam" autoplay playsinline muted aria-hidden="true"></video>
   <canvas id="sky" tabindex="0" role="img" aria-label="Interactive sky. Drag or use arrow keys to look around. Search objects for a text alternative." aria-describedby="skyHelp"></canvas>
-  <p id="skyHelp" class="sr-only">Focus the sky and use arrow keys to explore, or use Search objects below. Objects are calculated from time, location and sensors, not recognized from camera images.</p>
+  <p id="skyHelp" class="sr-only">Drag the sky or focus it and use arrow keys to switch to manual exploration. Tapping an object keeps Auto AR active. Use Search objects for a text alternative. Objects are calculated from time, location and sensors, not recognized from camera images.</p>
 
   <header class="telemetry" aria-label="Sky context">
-    <div id="cTL"><span id="brand">SKYLENS</span><span id="telTime">Current sky · UTC</span></div>
+    <div id="cTL"><span id="brand">SKYLENS<span class="brand-caption">PERSONAL OBSERVATORY</span></span><span id="telTime">Current sky · UTC</span></div>
     <div id="cTR"><span id="telAim">Manual sky</span><span id="telPos">Demo: New York · choose your location</span><span id="telCount" class="sr-only"></span></div>
   </header>
-  <div id="viewControls">
-    <div class="actionrow">
-      <button id="cameraToggle" class="primary" type="button">Enable camera</button>
-      <button id="openSearch" type="button">Search objects</button>
-      <button id="openAlign" type="button">Align</button>
-    </div>
-    <p id="cameraStatus" role="status">Manual sky · camera is off</p>
-    <div class="sensor-controls"><p id="sensorStatus">Drag to explore. Choose your location in Settings.</p><button id="toggleHindiNames" class="chip on" type="button" aria-label="Hindi names: Hide Hindi" aria-pressed="true">Hide Hindi</button></div>
-    <div id="simulationBanner" hidden><span id="simulationText">Simulated sky</span> <button id="returnLive" type="button">Return to now</button></div>
-  </div>
 
   <section id="infocard" aria-label="Selected object" hidden></section>
   <div id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
 
+  <aside id="console" aria-label="Observing controls">
+  <div id="viewControls" data-camera="off" data-tracking="off">
+    <div class="actionrow">
+      <button id="trackingToggle" class="primary" type="button" aria-pressed="false" aria-describedby="trackingStatus">Auto AR</button>
+      <button id="cameraToggle" type="button" aria-describedby="cameraStatus">Enable camera</button>
+    </div>
+    <div class="quick-actions">
+      <button id="openSearch" type="button">Search objects</button>
+      <button id="openAlign" type="button">Align</button>
+      <button id="toggleHindiNames" class="on" type="button" aria-label="Hindi names: Hide Hindi" aria-pressed="true">Hide Hindi</button>
+    </div>
+    <details id="viewStatus">
+      <summary><span id="viewMode">Manual sky</span><span id="cameraMode">Camera off</span></summary>
+      <div class="status-content">
+        <p id="trackingStatus" role="status" data-status="off">Auto AR follows your phone using motion sensors. Or drag the sky and use arrow keys to explore manually.</p>
+        <p id="cameraStatus" role="status">Camera off · calculated sky background. Camera video is optional.</p>
+        <p id="sensorStatus" hidden>Drag to explore. Choose your location in Settings.</p>
+      </div>
+    </details>
+    <div id="simulationBanner" hidden><span id="simulationText">Simulated sky</span><button id="returnLive" type="button">Return to now</button></div>
+  </div>
   <section id="dock" aria-label="Sky tools">
     <button id="dockHandle" type="button" aria-expanded="false" aria-controls="dockContent"><span id="dockLabel">Explore &amp; tools</span><span id="tapeReadout" aria-hidden="true">—</span><span class="handle-indicator" aria-hidden="true">⌃</span></button>
     <div id="dockContent" hidden>
@@ -156,15 +167,16 @@
       </section>
     </div>
   </section>
+  </aside>
 </div>
 
 <dialog id="onboard" aria-labelledby="welcomeTitle">
   <div class="sheet">
     <p class="eyebrow">SKYLENS</p><h1 id="welcomeTitle">Meet the sky above you.</h1>
-    <p class="sub">Point your phone and explore calculated stars and planets over the live camera.</p>
-    <ul><li><b>Camera</b><span>A live backdrop. Frames stay on your device.</span></li><li><b>Motion</b><span>Aims the overlay. Alignment may need adjustment.</span></li><li><b>Location</b><span>Choose your place in Settings for the correct local sky.</span></li></ul>
+    <p class="sub">Follow the sky with your phone. Camera optional.</p>
+    <ul><li><b>Auto AR</b><span>Motion sensors follow where you point. Use the calculated sky, or add your camera.</span></li><li><b>Camera</b><span>Optional live video. Frames stay on your device.</span></li><li><b>Your sky</b><span>Choose your location in Settings. Adjust alignment when needed.</span></li></ul>
     <p class="help">This is a sensor-based projection, not image recognition. You can also explore by dragging the sky.</p>
-    <div class="row"><button id="btnAR" type="button">Enable camera</button><button id="btnManual" type="button">Explore without camera</button></div>
+    <div class="row"><button id="btnAR" class="primary" type="button">Start Auto AR</button><button id="btnCamera" type="button">Start with camera</button><button id="btnManual" class="subtle" type="button">Explore manually</button></div>
     <p id="httpsWarn" hidden>Camera and motion require HTTPS. Manual exploration is available.</p>
     <p class="micro">No account · optional live feeds · open source</p>
   </div>

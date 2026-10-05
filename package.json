@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Live-sky AR tracker: stars, planets, satellites and aircraft in your phone camera. Zero-build static site.",
   "scripts": {
-    "test": "node tests/node/run.mjs && node tests/astronomy.mjs && node tests/camera.mjs && node tests/integration.mjs && node tests/names.mjs && node tests/observing.mjs && node tests/tracking-status.mjs && node tests/live-feeds.mjs --self-test && node tests/constellation-anchors.mjs",
+    "test": "node tests/node/run.mjs && node tests/astronomy.mjs && node tests/camera.mjs && node tests/integration.mjs && node tests/names.mjs && node tests/observing.mjs && node tests/tracking-status.mjs && node tests/live-feeds.mjs --self-test && node tests/constellation-anchors.mjs && node tests/tracking.mjs && node tests/render-graphics.mjs",
     "serve": "python3 -m http.server 8000"
   }
 }
