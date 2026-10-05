@@ -1,0 +1,1 @@
+Frozen original Globe UI for the UI-only performance comparison. Local implementation checkpoint `467897a`; these are project-owned source files, not live UI. Compare against the current UI with `node tests/globe-ui-benchmark.mjs`. The Pages workflow excludes tests.

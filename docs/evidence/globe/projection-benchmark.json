@@ -1,0 +1,185 @@
+{
+  "measuredAt": "2026-10-05T23:37:05.613Z",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "arch": "x64",
+  "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "rounds": 9,
+  "iterations": 100,
+  "warmups": 100,
+  "scenarios": [
+    {
+      "name": "world-1000",
+      "markers": 1000,
+      "zoom": 1,
+      "work": {
+        "visible": 501,
+        "inViewport": 501,
+        "picked": "fixture:centre"
+      },
+      "millisecondsPerProjectionAndPick": {
+        "median": 0.3805967099999998,
+        "min": 0.35329781999999965,
+        "max": 0.51853747,
+        "samples": [
+          0.35979703999999996,
+          0.36985038000000003,
+          0.4919216700000004,
+          0.51853747,
+          0.36245070999999995,
+          0.4390334999999999,
+          0.45549891000000003,
+          0.35329781999999965,
+          0.3805967099999998
+        ]
+      },
+      "millisecondsPerCachedProjectionOnly": {
+        "median": 0.025125870000000532,
+        "min": 0.02183811999999989,
+        "max": 0.0431585999999993,
+        "samples": [
+          0.0431585999999993,
+          0.03469654000000105,
+          0.02556871000000001,
+          0.02578326000000061,
+          0.025125870000000532,
+          0.022779520000000275,
+          0.022662559999999984,
+          0.02183811999999989,
+          0.023270499999999857
+        ]
+      }
+    },
+    {
+      "name": "regional-1000",
+      "markers": 1000,
+      "zoom": 8,
+      "work": {
+        "visible": 501,
+        "inViewport": 15,
+        "picked": "fixture:centre"
+      },
+      "millisecondsPerProjectionAndPick": {
+        "median": 0.38945764000000055,
+        "min": 0.3529784800000004,
+        "max": 0.5196097699999995,
+        "samples": [
+          0.3851128800000004,
+          0.3529784800000004,
+          0.4425627099999997,
+          0.38945764000000055,
+          0.3597497199999998,
+          0.4851231100000007,
+          0.5196097699999995,
+          0.37356043,
+          0.4378530599999999
+        ]
+      },
+      "millisecondsPerCachedProjectionOnly": {
+        "median": 0.027910229999999956,
+        "min": 0.02312182000000007,
+        "max": 0.038946439999999714,
+        "samples": [
+          0.038946439999999714,
+          0.030271619999999756,
+          0.024785080000000334,
+          0.027910229999999956,
+          0.026277410000000147,
+          0.02754498000000012,
+          0.029395999999999277,
+          0.02312182000000007,
+          0.028084590000000843
+        ]
+      }
+    },
+    {
+      "name": "world-10000",
+      "markers": 10000,
+      "zoom": 1,
+      "work": {
+        "visible": 4998,
+        "inViewport": 4998,
+        "picked": "fixture:centre"
+      },
+      "millisecondsPerProjectionAndPick": {
+        "median": 3.6178943700000015,
+        "min": 3.4952266299999972,
+        "max": 3.921736529999998,
+        "samples": [
+          3.770963989999998,
+          3.6178943700000015,
+          3.921736529999998,
+          3.817659990000002,
+          3.596649689999999,
+          3.74919883,
+          3.4952266299999972,
+          3.559071859999999,
+          3.524958239999996
+        ]
+      },
+      "millisecondsPerCachedProjectionOnly": {
+        "median": 0.2605036300000029,
+        "min": 0.21217602000000624,
+        "max": 0.3554312900000059,
+        "samples": [
+          0.21217602000000624,
+          0.2427899199999956,
+          0.23484954000000471,
+          0.2818994000000021,
+          0.3554312900000059,
+          0.26544057000000065,
+          0.2605036300000029,
+          0.2917943100000048,
+          0.25296403000000284
+        ]
+      }
+    },
+    {
+      "name": "world-60000-cap",
+      "markers": 60000,
+      "zoom": 1,
+      "work": {
+        "visible": 29998,
+        "inViewport": 29998,
+        "picked": "fixture:centre"
+      },
+      "millisecondsPerProjectionAndPick": {
+        "median": 20.464119410000002,
+        "min": 20.125791389999975,
+        "max": 21.464160549999995,
+        "samples": [
+          20.524104420000004,
+          21.243764499999997,
+          20.135491789999996,
+          21.464160549999995,
+          20.464119410000002,
+          20.630044280000003,
+          20.218073140000016,
+          20.308789219999998,
+          20.125791389999975
+        ]
+      },
+      "millisecondsPerCachedProjectionOnly": {
+        "median": 1.2904996200000096,
+        "min": 1.231268799999998,
+        "max": 3.576105060000009,
+        "samples": [
+          1.3100300299999799,
+          1.3037110200000097,
+          1.2392841000000043,
+          1.2874054700000124,
+          1.2668688699999984,
+          1.2904996200000096,
+          1.231268799999998,
+          3.576105060000009,
+          2.000523920000014
+        ]
+      }
+    }
+  ],
+  "limitations": "Node CPU only. Two different workloads: uncached spherical ground-marker projection plus one full-list hit test; and cached-vector projection only without picking. Excludes vector cache rebuild, Canvas/coastline rasterization, label layout, DOM, feeds, SGP4, sensors, GPU and physical phone performance. New-feature cost, not a before/after speedup or a ratio between equivalent workloads."
+}

@@ -15,6 +15,16 @@ globalThis.fetch = async url => ({ ok: true, json: async () => JSON.parse(readFi
 await Promise.all([loadStars(), loadConstellations(), loadDSOs()]);
 globalThis.fetch = originalFetch;
 
+// Aircraft retries now share a real provider budget across controller restarts.
+// Advance the deterministic test clock between independent scenarios instead of
+// disabling that production guard or waiting on real provider intervals.
+const realNow = Date.now;
+let aircraftClock = Date.parse('2026-10-07T00:00:00Z');
+test.beforeEach(t => {
+  if (/aircraft/.test(t.name)) { aircraftClock += 86400000; Date.now = () => aircraftClock; }
+});
+test.afterEach(() => { Date.now = realNow; });
+
 test('simulation time is explicit UTC and rejects rollover / unsupported dates', () => {
   assert.equal(parseSimulationTime('2026-10-03T12:30'), '2026-10-03T12:30:00.000Z');
   assert.equal(parseSimulationTime('2026-10-03T12:30:00+05:30'), '2026-10-03T07:00:00.000Z');
@@ -157,6 +167,7 @@ test('stopping aircraft aborts pending location request and suppresses late upda
   const oldFetch = globalThis.fetch;
   globalThis.fetch = async (_url, options) => { requestSignal = options.signal; return new Promise(resolve => { resolveFetch = resolve; }); };
   const poller = startPlanes(() => ({ lat: 40, lon: -74 }), () => { updates++; });
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(requestSignal.aborted, false); poller.stop(); assert.equal(requestSignal.aborted, true);
   resolveFetch({ ok: true, json: async () => ({ now: Date.now(), ac: [] }) });
   await new Promise(resolve => setImmediate(resolve));
@@ -184,6 +195,7 @@ test('stale or malformed aircraft payloads never become fresh on receipt', async
       { now: Date.now() - 120000, ac: [{ lat: 40.1, lon: -74, alt_baro: 35000, hex: 'old', seen_pos: 1 }] },
       { now: Date.now() + 120000, ac: [] }, { ac: [] }, { now: Date.now() }, null,
     ]) {
+      aircraftClock += 12000;
       globalThis.fetch = async () => ({ ok: true, json: async () => payload });
       let received;
       const poller = startPlanes(() => ({ lat: 40, lon: -74 }), update => { received = update; });

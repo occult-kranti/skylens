@@ -1,3 +1,7 @@
+# Current globe measurements
+
+The new Globe route, unchanged-catalogue UI caching, full Canvas costs and source-size inventory are recorded in [Globe verification](globe-verification.md#measured-cost-and-optimization), with retained before/after source fixtures and reproducible benchmark commands. Historical measurements below concern earlier releases and distinct workloads; do not combine their percentages.
+
 # Measured performance — 2026-10-03
 
 Measurements below were collected in the managed Linux execution container, Node v24.19.0. They are CPU computation measurements, not phone FPS, camera latency, browser paint or network-load measurements. No physical device was available.

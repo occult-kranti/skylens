@@ -22,10 +22,11 @@
     <div id="cTL"><span id="brand">SKYLENS<span class="brand-caption">PERSONAL OBSERVATORY</span></span><span id="telTime">Current sky · UTC</span></div>
     <div id="cTR"><span id="telAim">Manual sky</span><span id="telPos">Demo: New York · choose your location</span><span id="telCount" class="sr-only"></span></div>
   </header>
-  <nav id="nearbyControls" aria-label="Nearby sky layers">
+  <nav id="nearbyControls" aria-label="Sky tracking and globe view">
     <button id="toggleSatellites" type="button" aria-pressed="false" aria-describedby="satHelp"><span>Satellites</span><small id="satelliteToggleState">Off</small></button>
     <button id="togglePlanes" type="button" aria-pressed="false" aria-describedby="aircraftPrivacy"><span>Planes</span><small id="planeToggleState">Off</small></button>
     <button id="openNearby" type="button" aria-controls="trafficDetails">Nearby<br>status</button>
+    <a id="skyGlobeLink" href="globe.html" aria-label="Open Earth globe">Globe<span aria-hidden="true">↗</span></a>
   </nav>
 
   <section id="infocard" aria-label="Selected object" hidden></section>
@@ -67,6 +68,8 @@
       <section class="panel active" id="panelSky" role="tabpanel" aria-labelledby="tabSky" data-panel="sky">
         <p id="skyHandoffStatus" class="help" role="status" hidden></p>
         <section id="nearbySection" aria-label="Nearby sky tracking">
+          <p><a id="openGlobe" href="globe.html">Open the tracking globe →</a></p>
+          <p id="globeTargetStatus" class="help" role="status" hidden></p>
         <details id="trafficDetails"><summary>Nearby satellites &amp; aircraft</summary>
           <p id="nearbySummary" class="help">Choose a layer above. Camera and Auto AR are optional.</p>
           <h3 class="sect">In this direction</h3><ul id="aimingList"><li class="empty">Enable a nearby layer to find calculated matches to your view.</li></ul>

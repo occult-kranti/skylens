@@ -20,3 +20,13 @@ Hindi labels use original editorial transliterations and limited source-supporte
 | Optional aircraft alternate | [adsb.fi official API/terms](https://github.com/adsbfi/opendata/blob/main/README.md) | Personal, noncommercial access with attribution/link required; no blanket open-data licence asserted. User-selected, consented separately, no automatic fallback. Current browser availability unverified. |
 
 Only satellite.js and existing Astronomy Engine are bundled calculation dependencies; aircraft geometry and motion estimation are original local code. readsb/tar1090 were researched, not copied or bundled. See [provider matrix](aircraft-nearby-sources.md).
+
+## Geographic globe additions — October 5, 2026
+
+| Component | Source/version | Terms and treatment |
+|---|---|---|
+| Spherical clipping and cartography | [d3-geo 3.1.1](https://github.com/d3/d3-geo/tree/v3.1.1), bundled subset with d3-array 3.2.4 and internmap 2.0.3 | ISC; full notices in `vendor/globe/`. Exact npm integrity, entry, build command and output SHA-256 are in `vendor/globe/upstream.json`. Only the Globe route imports this bundle. |
+| World land | [Natural Earth 110m land](https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_110m_land.geojson) | Public domain. Exact upstream revision, Git blob and SHA-256 are recorded beside `data/earth-land.geojson`; notice in `data/earth-land-LICENSE.md`. No proprietary map imagery or tiles. |
+| Optional receiver input | User-owned or permitted readsb JSON endpoint | Schema compatibility grants no right to somebody else's data. Endpoint owner/provider determines coverage and permitted use. Neither readsb nor tar1090 server code is bundled. |
+
+Flightradar24, FlightAware, ADS-B Exchange, Google Earth and the astronomy products in [premium workflow research](premium-tracking-design-research.md) inform task flows only. No protected assets, airline logos or subscription data are copied. The globe does not infer a data licence from an open-source rendering licence.

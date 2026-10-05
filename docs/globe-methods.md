@@ -1,0 +1,35 @@
+# Globe methods, data and controls
+
+SkyLens Globe is a separate static route, `globe.html`, linked from Sky → Nearby status. It uses the existing Sky observer as an initial map centre. Rotating, zooming, device-location centring and regional data queries do not change that observer or any saved location. Both optional layers start off. Returning to Sky releases the globe feed; camera and motion permissions are never transferred.
+
+## Geographic rendering
+
+The view is a spherical orthographic projection with north up, longitude wrapped at the date line and a selectable centre from pole to pole. Zoom ranges from1× to32×. The globe radius is0.46 times the shorter canvas dimension times zoom. Projection/inversion and visible-hemisphere picking use original code, cross-checked against d3-geo; spherical polygon clipping and coastline rendering use pinned d3-geo3.1.1. This is a projection of WGS84-labelled geographic coordinates onto a display sphere, not an ellipsoidal distance calculator.
+
+Aircraft icons mark reported latitude/longitude, including ground reports and unknown altitude where a connected source provides them. Their height is not rendered to scale. Satellite icons mark their geographic subsatellite point, not the physical spacecraft floating at scaled orbital altitude; a far-side ground point is hidden even if a high satellite could be seen above a physical Earth's limb. The separate Sky view owns observer-relative elevation and camera alignment. Earth geography is Natural Earth110m public-domain land (exact upstream bytes/provenance beside the data), not street mapping, terrain or a navigational chart.
+
+Drag/arrow keys rotate; pinch, wheel, plus/minus buttons and keyboard +/- zoom; Home/World resets. Selecting a list object centres its current position. Follow re-centres on new reported/calculated samples; manual movement, expiry or layer-off stops following. A selected trail records at most120 samples at ten-second spacing over twenty minutes in this page session. It is not a flight plan, historical route database or predicted orbit. Search examines every loaded record; only the first80 matches are listed. Dense views draw representative actual records, disclose suppression, and preserve the selected object; no synthetic cluster aircraft are invented. The renderer limits glyphs to1,600 and labels to35; there can be up to60,000 aircraft plus the bounded satellite catalogue in memory.
+
+## Aircraft acquisition and freshness
+
+Public regional browsing uses the existing AvioADSB or explicitly selected experimental adsb.fi API. Load this area discloses coordinates/radius/provider/IP; panning never changes the query or causes a new query. A per-visit accepted source can be stopped/restarted with the Aircraft switch; it resumes that same source/area. It never silently follows the map centre, switches providers, or persists authorization across reloads. No mass regional scan is used to reconstruct restricted global snapshots.
+
+The optional receiver connector accepts a user-owned or otherwise permitted HTTPS JSON endpoint, with explicit `readsb-v2` (`ac`, Unix milliseconds) or `readsb-aircraft-json` (`aircraft`, Unix seconds) schema. It adds no coordinates, authentication, cookies or proxy, rejects redirects and URL credentials/query parameters/fragments, and requires browser CORS. A coverage description is source-declared and unverified. No unrestricted global feed was established during research; see [the source comparison](globe-data-research.md). No commercial account, feeder entitlement or API key was created.
+
+Responses are streamed with a32MiB decompressed limit and at most60,000 rows; overflow fails explicitly, never silently truncates. A dedicated local module Worker parses/normalizes large receiver payloads; abort, timeout, source change, backgrounding or stop terminates it. Worker-unavailable environments use a main-thread fallback identified in processing metadata; worker loading/runtime failures are explicit. No second fetcher or server is introduced. Validation rejects stale/future provider timestamps, invalid coordinates and stale positions; duplicate identifiers retain the newest position. Latitude/longitude remain absolute with no local-radius or horizon clipping for receiver data.
+
+Position time is provider time minus `seen_pos`; receipt is not substituted. The map displays reported geographic positions without extrapolation. Markers/follow expire after20s; list entries after60s. Fresh ground/unknown-altitude reports remain map-eligible but are not asserted usable for an AR elevation. Geometric WGS84 feet are preferred where available; pressure-altitude fallback and missing altitude are labelled. No flight destination, airline identity or route is inferred from a callsign.
+
+Sky and Globe share persisted provider request reservations (12s Avio,5s fi), using Web Locks where supported. Receiver requests use a15s minimum and hashed endpoint reservations. Local storage failures or missing Web Locks limit cross-tab coordination; server quotas remain authoritative and may be shared by other network users. HTTP401/403/429 access/quota states stop polling; other failures back off; visibility and generation guards discard late responses. Neither source has an uptime or complete-coverage guarantee.
+
+## Satellite scope
+
+The enabled layer uses the existing CelesTrak stations+visual dataset and pinned satellite.js7.1.0 SGP4, updated locally at1Hz with next-sample work disabled for this reported-position map. It reuses the two-hour cache/request reservation and dated fallback, suppresses elements more than seven days from now, and displays source/epoch uncertainty. It is neither the full satellite catalogue nor an optical-visibility prediction. See [satellite methods](satellite-nearby-methods.md).
+
+## Globe → Sky selection
+
+View in Sky transfers only an identifier, name, category and five-minute-lived timestamp through same-origin session storage. It never transfers a coordinate report, query centre, connection, camera/motion permission or feed authorization. Sky uses its existing observer, opens at now for this selection, and asks the user to enable the relevant source. The identifier is resolved only against freshly available Sky data; a global receiver's object may not exist in that different regional source. A one-use validated record and clear pending message prevent old globe coordinates from becoming apparently live camera guidance.
+
+## Verification and limits
+
+Deterministic tests cover independently cross-checked projection, poles/date line, clipping/picking, timestamp schemas, privacy, global unclipped records, bounds and worker cancellation. Browser fixtures cover touch/wheel/keyboard, responsive controls, consent, selection/follow and background/error behavior. Actual provider delivery is separate from mocked global payloads. Synthetic performance measurements are desktop costs, not phoneFPS. Physical touch ergonomics, screen readers, receiver coverage and camera alignment remain human checks. No camera images are recognized or transmitted.

@@ -68,8 +68,8 @@ body.camera-on #backdrop { display: none; }
 #telPos.demo { color: var(--amber); }
 #nearbyControls {
   position: fixed; z-index: 9; top: calc(var(--telemetry-height) + 8px);
-  left: 50%; transform: translateX(-50%); width: min(360px, calc(100% - 20px));
-  display: grid; grid-template-columns: 1fr 1fr 76px; gap: 6px;
+  left: 50%; transform: translateX(-50%); width: min(420px, calc(100% - 20px));
+  display: grid; grid-template-columns: 1fr 1fr 64px 56px; gap: 6px;
 }
 #nearbyControls button { min-width: 0; min-height: 44px; padding: 5px 8px; background: var(--glass); }
 #nearbyControls button span, #nearbyControls button small { display: block; }
@@ -78,6 +78,8 @@ body.camera-on #backdrop { display: none; }
 #nearbyControls button[data-status="error"], #nearbyControls button[data-status="unavailable"],
 #nearbyControls button[data-status="limited"] { border-color: var(--warn); }
 #openNearby { font-size: 11px; font-weight: 500; }
+#skyGlobeLink { display: flex; align-items: center; justify-content: center; flex-direction: column; min-height: 44px; min-width: 44px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--glass); font-size: 11px; font-weight: 600; line-height: 1.4; text-decoration: none; }
+#skyGlobeLink:hover { border-color: var(--accent); }
 #nearbySection { margin-bottom: 18px; }
 #trafficDetails > select { width: 100%; margin-bottom: 14px; }
 #trafficDetails .sect { margin-top: 22px; }

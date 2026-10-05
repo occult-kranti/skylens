@@ -1,0 +1,27 @@
+{
+  "tool": "esbuild0.25.12",
+  "command": "esbuild entry.js --bundle --format=esm --minify --legal-comments=inline --target=es2020 --outfile=vendor/d3-geo.js",
+  "entry": "export {geoOrthographic,geoPath,geoGraticule10,geoCircle} from 'd3-geo';",
+  "packages": {
+    "d3-geo": {
+      "version": "3.1.1",
+      "resolved": "https://registry.npmjs.org/d3-geo/-/d3-geo-3.1.1.tgz",
+      "integrity": "sha512-637ln3gXKXOwhalDzinUgY83KzNWZRKbYubaG+fGVuc/dxO64RRljtCTnf5ecMyE1RIdtqpkVcq0IbtU2S8j2Q==",
+      "license": "ISC"
+    },
+    "d3-array": {
+      "version": "3.2.4",
+      "resolved": "https://registry.npmjs.org/d3-array/-/d3-array-3.2.4.tgz",
+      "integrity": "sha512-tdQAmyA18i4J7wprpYq8ClcxZy3SC31QMeByyCFyRt7BVHdREQZ5lpzoe5mFEYZUWe+oq8HBvk9JjpibyEV4Jg==",
+      "license": "ISC"
+    },
+    "internmap": {
+      "version": "2.0.3",
+      "resolved": "https://registry.npmjs.org/internmap/-/internmap-2.0.3.tgz",
+      "integrity": "sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg==",
+      "license": "ISC"
+    }
+  },
+  "outputSha256": "f3576fc5f2ae35720e73980e103d31d84d7712a95c978b89e177badaf96c2f50",
+  "bytes": 22478
+}
