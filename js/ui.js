@@ -226,7 +226,8 @@ export function createUI(handlers = {}) {
       const naming = node('p', `${nameRecord.transliteration ? `${nameRecord.transliteration} · ` : ''}${method}`, 'name-method meta');
       card.append(naming);
       if (nameRecord.traditionalAliases?.length) {
-        const aliases = node('p', 'Traditional aliases: ', 'meta');
+        const aliases = node('p', 'Traditional aliases: ', 'meta hindi-aliases');
+        aliases.hidden = nameMode() === 'en';
         nameRecord.traditionalAliases.forEach((alias, index) => {
           if (index) aliases.append(document.createTextNode(' · '));
           const label = typeof alias === 'string' ? alias : alias.hindi || alias.name || alias.english || '';
@@ -400,6 +401,11 @@ export function createUI(handlers = {}) {
     currentState = state;
     lastNameMode = state.nameMode || 'bilingual';
     $('nameMode').value = lastNameMode;
+    const hindiVisible = lastNameMode !== 'en';
+    $('toggleHindiNames').setAttribute('aria-pressed', String(hindiVisible));
+    $('toggleHindiNames').classList.toggle('on', hindiVisible);
+    $('toggleHindiNames').textContent = hindiVisible ? 'Hide Hindi' : 'Show Hindi';
+    $('toggleHindiNames').setAttribute('aria-label', `Hindi names: ${hindiVisible ? 'Hide Hindi' : 'Show Hindi'}`);
     document.querySelectorAll('#chips .chip').forEach(chip => {
       const key = chip.dataset.layer, on = key === 'night' ? !!state.night : state.layers[key] !== false;
       chip.classList.toggle('on', on); chip.setAttribute('aria-pressed', String(on));
@@ -413,7 +419,10 @@ export function createUI(handlers = {}) {
     if (changedNameMode) {
       savedSignature = '';
       if (latestTonight) tonight(latestTonight);
-      if (activeItem && !card.hidden) setName(card.querySelector('h2'), activeItem);
+      if (activeItem && !card.hidden) {
+        setName(card.querySelector('h2'), activeItem);
+        card.querySelectorAll('.hindi-aliases').forEach(element => { element.hidden = !hindiVisible; });
+      }
       renderOrbit();
     }
     saved(state);
@@ -438,6 +447,10 @@ export function createUI(handlers = {}) {
     }
     $('setNight').addEventListener('change', () => { onChange({ night:$('setNight').checked }); syncSettings(state); });
     $('nameMode').addEventListener('change', () => { onChange({ nameMode:$('nameMode').value }); syncSettings(state); });
+    $('toggleHindiNames').addEventListener('click', () => {
+      onChange({ nameMode:state.nameMode === 'en' ? 'bilingual' : 'en' });
+      syncSettings(state);
+    });
     $('resetAlignment').addEventListener('click', () => {
       onChange({ fov:70, headingOffset:0, pitchOffset:0 });
       for (const [id, value, output] of [['setFov',70,'fovVal'], ['setHeading',0,'headingVal'], ['setPitch',0,'pitchVal']]) { $(id).value = value; $(output).textContent = value + '°'; $(id).setAttribute('aria-valuetext', value + '°'); }

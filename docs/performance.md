@@ -60,3 +60,8 @@ Same local Linux environment, Python gzip with mtime=0, sum of individually comp
 This measures the source cost of added naming, observing and feed handling, not first-load transfer or a speedup. Core catalogue calculation remains at 1 Hz; sensor projection remains frame-driven; selected-object event search runs on demand, outside the animation loop. The solar-system module remains lazy-loaded. No new runtime framework, remote font or calculation dependency was added. The HYG source still contains 1,023 rows, but the solar-origin row is now excluded so 1,022 distant stars enter the runtime catalogue.
 
 Selected-object microbenchmark on Node 24.19.0, London 51.5°N/0°E, `2026-10-05T00:00:00Z`, Astronomy Engine 2.1.19: ten warmup calls then five rounds of 100 synchronous `calculateObjectEvents` calls per object, no DOM/network/cache. Median elapsed per call was 0.464 ms for Moon and 0.120 ms for Sirius (J2000 RA 6.75248 h, declination −16.71612°). These are isolated new-function costs, not before/after or representative phone timings. Actual mobile FPS, memory and optical alignment remain pending device measurement.
+
+Direct visibility-button follow-up, same measurement method; no new dependencies or calculation work:
+
+- HTML + CSS: 37,632 raw bytes; 11,321 summed gzip bytes.
+- Application JS: 147,695 raw bytes; 50,599 summed gzip bytes.
