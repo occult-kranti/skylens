@@ -16,6 +16,8 @@ Use **Align** to correct heading and pitch and estimate your camera’s diagonal
 * **Settings:** saved location, night palette, magnitude, alignment and optional feeds. The initial New York demo location is explicitly labeled; GPS is requested only when chosen.
 * **Charts & calendars:** connected links to the separate [Astrology Workbench](https://occult-kranti.github.io/astrology-sim-ant/), preserving its existing natal, transit, synastry, Vedic and historical tools.
 
+**Observe → Cast:** open an object's details and choose **Cast this observation**, or use Tools → **Cast this sky moment**, to continue in Studio with a frozen UTC instant and observer. Hindi naming preference and constellation identity return with the snapshot. The explicit link uses a URL fragment: coordinates remain in browser history, while camera frames, permissions, notes and birth data stay out of the handoff. Imported snapshots start with camera, motion and optional feeds off. See [the handoff contract and validation](docs/sky-handoff.md). Publishing the receiving Studio adapter is a prerequisite for releasing these outgoing links.
+
 Aircraft data is off until enabled and sends rounded observer coordinates to AvioADSB. Satellite data comes from CelesTrak or a timestamped cached/bundled snapshot. Elements more than seven days from the selected instant are omitted; even fresh elements are estimates. Neither feed is for navigation.
 
 ## Run and test

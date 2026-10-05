@@ -13,6 +13,7 @@ const NOTE_KEY = 'skylens.observation-note.v1';
 
 export function createUI(handlers = {}) {
   const dock = $('dock'), card = $('infocard'), toastBox = $('toasts');
+  const handoffMessage = $('skyHandoffStatus'), handoffHome = handoffMessage.parentElement;
   let dockOpen = false, camera = 'off', currentState = null, activeItem = null;
   let returnFocus = null, currentQuery = '', favouriteIds = new Set(), timeDirty = false;
   let returnPanel = null, returnObjectKey = null;
@@ -20,6 +21,7 @@ export function createUI(handlers = {}) {
   let savedSignature = '', savedById = new Map();
   let locationSignature = '', lastNameMode = 'bilingual', latestTonight = null;
   let detailRequest = 0;
+  let sharedContextMessage = '';
   let toastTimer = null;
   const consolePanel = $('console');
   let chromeObserver = null;
@@ -57,7 +59,7 @@ export function createUI(handlers = {}) {
     $('dockContent').hidden = !dockOpen;
     $('dockHandle').setAttribute('aria-expanded', String(dockOpen));
     $('dockLabel').textContent = dockOpen ? 'Close tools' : 'Explore & tools';
-    if (dockOpen) { card.hidden = true; $('viewStatus').open = false; }
+    if (dockOpen) { handoffHome.prepend(handoffMessage); card.hidden = true; $('viewStatus').open = false; }
     measureChrome();
   }
   $('dockHandle').addEventListener('click', () => setDock(!dockOpen));
@@ -249,13 +251,15 @@ export function createUI(handlers = {}) {
     parent.append(grid);
   }
   function showInfo(item, trigger = document.activeElement) {
-    if (!item) { detailRequest++; card.hidden = true; return; }
+    if (!item) { detailRequest++; handoffHome.prepend(handoffMessage); card.hidden = true; return; }
     const d = normalise(item); activeItem = d;
-    const detailDate = new Date(currentState?.selectedTime || Date.now());
-    const detailLoc = { ...currentState?.loc };
-    const context = `${currentState?.selectedTime ? 'Selected' : 'Snapshot'}: ${detailDate.toISOString().slice(0, 16).replace('T', ' ')} UTC · ${finite(detailLoc.lat, 3)}° latitude, ${finite(detailLoc.lon, 3)}° longitude${detailLoc.name ? ` · ${detailLoc.name}` : ''}. Reopen to update.`;
+    let observation = null;
+    try { observation = handlers.captureObservation?.(d); } catch { /* leave capture unavailable for an unsupported record */ }
+    const detailDate = new Date(observation?.dateISO || currentState?.selectedTime || Date.now());
+    const detailLoc = observation ? { lat: observation.lat, lon: observation.lon } : { ...currentState?.loc };
+    const context = `${currentState?.selectedTime ? 'Selected' : 'Snapshot'}: ${detailDate.toISOString().slice(0, 19).replace('T', ' ')} UTC · ${finite(detailLoc.lat, 3)}° latitude, ${finite(detailLoc.lon, 3)}° longitude${detailLoc.name ? ` · ${detailLoc.name}` : ''}. Reopen to update.`;
     returnFocus = trigger;
-    returnPanel = dockOpen ? returnFocus?.closest('[data-panel]')?.dataset.panel || null : null;
+    returnPanel = dockOpen ? returnFocus?.closest('[data-panel]')?.dataset.panel || tabs.find(tab => tab.getAttribute('aria-selected') === 'true')?.dataset.tab || null : null;
     returnObjectKey = returnFocus?.closest('[data-object-key]')?.dataset.objectKey || null;
     $('viewStatus').open = false;
     setDock(false); card.replaceChildren();
@@ -263,6 +267,7 @@ export function createUI(handlers = {}) {
     const heading = setName(node('h2'), d); heading.tabIndex = -1;
     card.append(close, heading);
     card.append(node('p', context, 'detail-context meta'));
+    if (sharedContextMessage) { handoffMessage.classList.add('handoff-context'); card.append(handoffMessage); }
     const nameRecord = objectNameRecord(d);
     if (nameRecord.hindi) {
       const method = nameRecord.methodLabel || (nameRecord.method === 'transliteration' ? 'Hindi transliteration' : 'Reviewed Hindi name');
@@ -304,6 +309,12 @@ export function createUI(handlers = {}) {
       save.dataset.action = 'save'; save.setAttribute('aria-pressed', String(favouriteIds.has(d.id))); controls.append(save);
     }
     card.append(controls);
+    if (observation) {
+      const capture = button('Cast this observation', () => handlers.castObservation?.(observation));
+      capture.id = 'castSkyObject'; capture.setAttribute('aria-describedby', 'castSkyObjectPrivacy');
+      const privacy = node('p', 'Opens this frozen instant, observer and object in Studio. Coordinates remain in the link and browser history; no video, permissions, notes or birth data are shared.', 'help');
+      privacy.id = 'castSkyObjectPrivacy'; card.append(capture, privacy);
+    }
     const events = node('section', null, 'object-events'); events.id = 'objectEvents';
     events.setAttribute('aria-live', 'polite'); events.setAttribute('aria-busy', 'true');
     events.append(node('h3', 'Rise, set & transit'), node('p', 'Calculating the next 48 hours…', 'meta'));
@@ -314,7 +325,7 @@ export function createUI(handlers = {}) {
       const date = new Date(value);
       return Number.isFinite(date.getTime()) ? `${date.toISOString().slice(0, 16).replace('T', ' ')} UTC` : String(value);
     };
-    Promise.resolve().then(() => handlers.objectEvents?.(d)).then(result => {
+    Promise.resolve().then(() => handlers.objectEvents?.(d, observation)).then(result => {
       if (request !== detailRequest || !events.isConnected || card.hidden) return;
       events.replaceChildren(node('h3', 'Rise, set & transit'));
       if (!result || result.error) {
@@ -333,6 +344,12 @@ export function createUI(handlers = {}) {
       events.setAttribute('aria-busy', 'false');
     });
   }
+  function handoffStatus(record, message = '') {
+    sharedContextMessage = record ? `Frozen shared observation · ${record.dateISO.replace('.000Z', ' UTC')} · ${record.locationSource === 'demo' ? 'demo coordinates' : 'selected observer'} · captured from a ${record.mode === 'current' ? 'current' : 'simulated'} sky. Camera and Auto AR start off; Return to now changes the sky time.` : '';
+    handoffMessage.textContent = [sharedContextMessage, message].filter(Boolean).join(' ');
+    handoffMessage.hidden = !handoffMessage.textContent;
+  }
+  $('castSkyMoment').addEventListener('click', () => handlers.castObservation?.());
   function renderList(el, objects, empty, subtitle) {
     // A focused result is never discarded by the once-per-second refresh.
     if (el.contains(document.activeElement)) return;
@@ -627,5 +644,5 @@ export function createUI(handlers = {}) {
     clearTimeout(toastTimer);
     detailRequest++;
   }
-  return { toast, statusDot, telemetry, compassTape, trackingState, cameraState, showInfo, skyList, searchResults, satList, planeList, tonight, bindChips, bindSettings, syncSettings, onboarding, saved, setDock, setTab, orbit:renderOrbit, dispose };
+  return { toast, statusDot, telemetry, compassTape, trackingState, cameraState, showInfo, handoffStatus, skyList, searchResults, satList, planeList, tonight, bindChips, bindSettings, syncSettings, onboarding, saved, setDock, setTab, orbit:renderOrbit, dispose };
 }

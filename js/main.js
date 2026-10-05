@@ -11,6 +11,7 @@ import { createRenderer, PALETTES } from './render.js';
 import { createUI } from './ui.js';
 import { displayName, searchNames, NAME_MODES } from './names.js';
 import { calculateObjectEvents } from './observing.js';
+import { buildSkyHandoff, parseSkyHandoff } from './handoff.js';
 
 const PREFS_KEY = 'skylens.preferences.v2';
 const DEMO_LOC = { lat: 40.7128, lon: -74.006, source: 'demo (New York)' };
@@ -96,11 +97,38 @@ export function shouldRenderFrame(timestamp, previousFrame, reducedMotion) {
   return previousFrame == null || !reducedMotion || timestamp - previousFrame >= 32;
 }
 
+// A deliberate capture, not a stream. Only whitelisted observing context crosses
+// applications; browser/device time zone, frames and sensor state never do.
+export function captureSkyObservation(state, item = null, now = Date.now()) {
+  const at = new Date(state.selectedTime || now);
+  at.setUTCMilliseconds(0);
+  const object = item?.id ? { id: item.id, name: item.name, kind: item.kind } : null;
+  const value = { dateISO: at.toISOString(), lat: state.loc.lat, lon: state.loc.lon,
+    mode: state.selectedTime ? 'simulated' : 'current',
+    locationSource: state.loc.source?.startsWith('demo') ? 'demo' : 'selected', object, names: state.nameMode };
+  // The same validation gates outgoing values and untrusted incoming fragments.
+  return parseSkyHandoff(new URL(buildSkyHandoff(value, 'studio')).hash);
+}
+
+export function resolveHandoffObject(object, catalogue) {
+  if (!object) return null;
+  const byId = catalogue.find(row => row.id === object.id && row.kind === object.kind && row.name === object.name);
+  if (byId) return byId;
+  // Index-based star/figure IDs can move in a future catalogue release. Require
+  // one exact canonical-name/category match; never merge Serpens' two parts.
+  if (!['star', 'constellation'].includes(object.kind)) return null;
+  const byName = catalogue.filter(row => row.kind === object.kind && row.name === object.name);
+  return byName.length === 1 ? byName[0] : null;
+}
+
 export function createApplication() {
   const $ = id => document.getElementById(id), qp = new URLSearchParams(location.search);
   let storage = null;
   try { storage = localStorage; } catch { /* storage blocked */ }
   const prefs = readPreferences(storage);
+  let incomingHandoff = null, handoffError = '';
+  try { incomingHandoff = parseSkyHandoff(location.hash); }
+  catch (error) { handoffError = error.message; }
   // A previous session never silently resumes external aircraft location sharing.
   prefs.layers.planes = false;
   if (qp.has('lat') && qp.has('lon')) {
@@ -108,6 +136,13 @@ export function createApplication() {
     if (qp.get('lat')?.trim() && qp.get('lon')?.trim() && validLocation(urlLoc)) prefs.loc = urlLoc;
   }
   if (qp.has('fov') && Number.isFinite(Number(qp.get('fov')))) prefs.fov = X.clamp(Number(qp.get('fov')), 30, 120);
+  if (incomingHandoff) {
+    prefs.loc = { lat: incomingHandoff.lat, lon: incomingHandoff.lon,
+      source: incomingHandoff.locationSource === 'demo' ? 'demo (shared snapshot)' : 'shared snapshot' };
+    prefs.selectedTime = incomingHandoff.dateISO; // even a captured current sky opens frozen
+    prefs.nameMode = incomingHandoff.names;
+    prefs.layers.sats = false; // a URL never opts this visit into external feeds
+  }
   const state = { ...prefs, mode: 'manual', az: 200, alt: 30, sensor: null,
     bodies: [], sats: [], satelliteCatalogue: [], planes: [], planeStatus: 'off', planeAge: null, planeInfo: null, tleMeta: null,
     highlight: null, selectedId: null, cameraStatus: 'off', trackingStatus: 'off', trackingRequested: false, savedObjects: [] };
@@ -116,9 +151,15 @@ export function createApplication() {
   let animation = null, clockTimer = null, aircraft = null, satelliteController = null, satelliteReady = false;
   let engine = null, snapshot = { stars: [], renderStars: [], visibleCount: 0, constellations: [], dsos: [], renderDSOs: [], bodies: [], catalogue: [] };
   let smoothed = null, previousFrame = null, lastTelemetry = 0, lastMessage = '', lastTrackingMessage = '', lastEventsKey = '', query = '';
+  let catalogueSettled = false, engineSettled = false, pendingHandoffObject = incomingHandoff?.object || null;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const ui = createUI({ relocate, locate, toggleTracking, startTracking, startCamera: enableCamera, stopCamera: () => stopCamera('off'),
-    setTime, search, toggleFavourite, saveLocation, useLocation, removeLocation, objectEvents, refreshSatellites });
+    setTime, search, toggleFavourite, saveLocation, useLocation, removeLocation, objectEvents, refreshSatellites,
+    captureObservation: item => captureSkyObservation(state, item),
+    castObservation: record => {
+      try { location.assign(buildSkyHandoff(record || captureSkyObservation(state), 'studio')); }
+      catch (error) { ui.toast(error.message, 6000); }
+    } });
   const tracking = createTrackingController({
     onSample(sample) {
       if (disposed || document.hidden) return;
@@ -171,8 +212,9 @@ export function createApplication() {
     const stored = persist(); updateSaved();
     return { ok: true, message: stored ? 'Saved location removed.' : 'Removed for this session only. Browser storage is unavailable.' };
   }
-  async function objectEvents(item) {
-    const date = dateNow(), loc = { ...state.loc };
+  async function objectEvents(item, observation = null) {
+    const date = observation ? new Date(observation.dateISO) : dateNow();
+    const loc = observation ? { lat: observation.lat, lon: observation.lon } : { ...state.loc };
     const source = snapshot.catalogue.find(o => o.id === item.id) || item;
     // A rise/set can cross "now" within a single minute. Reuse only the exact
     // selected instant so a cached event can never become a past "next" event.
@@ -186,12 +228,23 @@ export function createApplication() {
     return result;
   }
   function allObjects() { return [...snapshot.catalogue, ...state.satelliteCatalogue, ...state.planes.map(p => ({ ...p, kind: 'plane', name: p.flight }))]; }
+  function restoreHandoffSelection() {
+    if (!pendingHandoffObject || disposed || document.hidden || !catalogueSettled || !engineSettled) return;
+    const object = pendingHandoffObject;
+    pendingHandoffObject = null;
+    const target = resolveHandoffObject(object, allObjects());
+    if (target) {
+      locate(target);
+      ui.showInfo(target);
+    } else ui.handoffStatus(incomingHandoff, `The shared object “${object.name}” is unavailable in the loaded catalogue. The instant, observer and naming preference were restored. Optional feeds remain off.`);
+  }
   function updateSaved() {
     state.savedObjects = allObjects().filter(o => state.favourites.includes(o.id));
     ui.saved?.(state);
   }
   function search(value) { query = String(value || ''); return searchCatalogue(allObjects(), query, state.favourites); }
   function locate(target) {
+    pendingHandoffObject = null; // a deliberate new target supersedes late import selection
     if (!target) { state.highlight = null; state.selectedId = null; return; }
     if (!target || !Number.isFinite(target.alt) || !Number.isFinite(target.az)) return;
     const known = allObjects().find(o => o.id === target.id || o.name === (target.label || target.name));
@@ -209,15 +262,23 @@ export function createApplication() {
     persist(); updateSaved(); ui.searchResults?.(search(query));
     return !has;
   }
+  function clearIncomingHandoff() {
+    if (!incomingHandoff) return;
+    incomingHandoff = null; pendingHandoffObject = null;
+    ui.handoffStatus(null);
+    try { history.replaceState(null, '', location.pathname + location.search); } catch { /* optional URL cleanup */ }
+  }
   function setTime(value) {
     try {
-      state.selectedTime = parseSimulationTime(value); persist(); refreshSky(true); syncFeeds();
+      const nextTime = parseSimulationTime(value);
+      clearIncomingHandoff(); state.selectedTime = nextTime; persist(); refreshSky(true); syncFeeds();
       ui.toast(state.selectedTime ? 'Simulated UTC time. Camera still shows the present.' : 'Returned to the live sky.');
       return state.selectedTime;
     } catch (e) { ui.toast(e.message, 5000); return false; }
   }
   function applySettings(patch) {
     if (patch.loc && !validLocation(patch.loc)) { ui.toast('Enter valid latitude and longitude.'); return; }
+    if (patch.loc) clearIncomingHandoff();
     if ('selectedTime' in patch) { setTime(patch.selectedTime); delete patch.selectedTime; }
     const next = normalizePreferences({ ...state, ...patch });
     Object.assign(state, next);
@@ -377,6 +438,7 @@ export function createApplication() {
         ui.orbit?.(date, engine);
       } catch { ui.toast('Observing events unavailable for these inputs.'); }
     }
+    restoreHandoffSelection();
   }
 
   function frame(timestamp) {
@@ -428,6 +490,9 @@ export function createApplication() {
     satelliteController?.abort(); satelliteController = null;
   }
   const gestureController = new AbortController(), listen = (element, name, fn) => element.addEventListener(name, fn, { signal: gestureController.signal });
+  // A slow catalogue import must not steal focus after the user starts a task.
+  listen(document, 'pointerdown', () => { pendingHandoffObject = null; });
+  listen(document, 'keydown', () => { pendingHandoffObject = null; });
   let pointer = null;
   listen(canvas, 'pointerdown', event => {
     pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, total: 0, at: performance.now() };
@@ -465,22 +530,44 @@ export function createApplication() {
   listen(document, 'visibilitychange', () => document.hidden ? suspend() : resumeClock());
   listen(window, 'pagehide', suspend);
   listen(window, 'pageshow', resumeClock);
+  listen(window, 'hashchange', () => {
+    let record;
+    try { record = parseSkyHandoff(location.hash); }
+    catch (error) { ui.handoffStatus(null, `${error.message} No shared inputs were applied.`); ui.setTab('sky'); return; }
+    if (!record) return;
+    stopTracking(); stopCamera('off');
+    incomingHandoff = record; pendingHandoffObject = record.object;
+    Object.assign(state, { loc: { lat: record.lat, lon: record.lon, source: record.locationSource === 'demo' ? 'demo (shared snapshot)' : 'shared snapshot' },
+      selectedTime: record.dateISO, nameMode: record.names, selectedId: null, highlight: null });
+    state.layers.sats = false; state.layers.planes = false;
+    ui.syncSettings(state); ui.handoffStatus(record); ui.setTab('sky');
+    refreshSky(true); syncFeeds();
+  });
   ui.bindSettings(state, applySettings); ui.bindChips(state, applySettings);
   document.body.classList.toggle('night', state.night);
   cameraStatus('off', 'Rendered sky. Camera is optional and stays off until enabled.');
   trackingChanged(tracking.state);
   resumeClock();
   Promise.allSettled([loadStars(), loadConstellations(), loadDSOs()]).then(results => {
+    if (disposed) return;
+    catalogueSettled = true;
     if (results.some(r => r.status === 'rejected')) ui.toast('Some sky data could not load. Reload to retry.', 6000);
     refreshSky(true);
+    restoreHandoffSelection();
   });
   engineReady.then(value => {
+    if (disposed) return;
+    engineSettled = true;
     engine = value;
     if (!engine) { ui.toast('Planet engine unavailable. Catalogue positions are approximate.', 6000); ui.tonight(null); }
     refreshSky(true);
+    restoreHandoffSelection();
   });
-  if (qp.has('dock')) ui.setTab(qp.get('dock'));
-  if (!qp.has('manual') && !qp.has('nointro')) ui.onboarding();
+  if (incomingHandoff || handoffError) {
+    ui.handoffStatus(incomingHandoff, handoffError ? `${handoffError} No shared inputs were applied; this is your previous or demo sky.` : '');
+    ui.setTab('sky');
+  } else if (qp.has('dock')) ui.setTab(qp.get('dock'));
+  if (!incomingHandoff && !handoffError && !qp.has('manual') && !qp.has('nointro')) ui.onboarding();
   return { state, stop() { disposed = true; stopTracking(); suspend(); gestureController.abort(); ui.dispose?.(); renderer.dispose?.(); } };
 }
 
