@@ -47,3 +47,16 @@ Main-thread frame duration, label-layout cost on mobile, memory across camera re
 ## Final static resource inventory
 
 2026-10-03, exact release candidate sources. Raw bytes and sum of individually gzip-compressed files (Python gzip.compress; not an HTTP waterfall): HTML+CSS28,563/8,947;11 applicationJS modules95,002/33,909;18 locally included engine modules501,346/135,614;4 catalogue JSON files95,250/36,146. Orbit is dynamically loaded on Explore; satellite source is local, and core startup performs no CDN/font fetch. These sizes do not establish first-paint or network performance. The baseline group gzip figures above combined files and therefore are not a directly comparable transfer metric.
+
+## October 5 feature cost
+
+Same local Linux environment, Python gzip with mtime=0, sum of individually compressed resources. Baseline local snapshot `ec335ab` corresponds to remote main `4e91d53e`; the after column is the final Hindi/mobile/tracking implementation in PR #6. Application JS grows from 11 to 13 modules; vendor engines and catalogue files are unchanged.
+
+| Resource group | Before raw bytes | Before gzip bytes | After raw bytes | After gzip bytes |
+|---|---:|---:|---:|---:|
+| HTML + CSS | 28,563 | 8,947 | 37,220 | 11,226 |
+| Application JS | 95,643 | 34,123 | 146,952 | 50,422 |
+
+This measures the source cost of added naming, observing and feed handling, not first-load transfer or a speedup. Core catalogue calculation remains at 1 Hz; sensor projection remains frame-driven; selected-object event search runs on demand, outside the animation loop. The solar-system module remains lazy-loaded. No new runtime framework, remote font or calculation dependency was added. The HYG source still contains 1,023 rows, but the solar-origin row is now excluded so 1,022 distant stars enter the runtime catalogue.
+
+Selected-object microbenchmark on Node 24.19.0, London 51.5°N/0°E, `2026-10-05T00:00:00Z`, Astronomy Engine 2.1.19: ten warmup calls then five rounds of 100 synchronous `calculateObjectEvents` calls per object, no DOM/network/cache. Median elapsed per call was 0.464 ms for Moon and 0.120 ms for Sirius (J2000 RA 6.75248 h, declination −16.71612°). These are isolated new-function costs, not before/after or representative phone timings. Actual mobile FPS, memory and optical alignment remain pending device measurement.

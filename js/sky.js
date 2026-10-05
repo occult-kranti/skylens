@@ -12,8 +12,10 @@ export async function loadStars(url = 'data/stars.json') {
   const res = await fetch(url);
   if (!res.ok) throw new Error('stars.json ' + res.status);
   const j = await res.json();
-  stars = j.stars.filter(([ra, dec, mag]) => [ra, dec, mag].every(Number.isFinite))
-    .map(([ra, dec, mag, name], index) => ({ id: `star:${index}`, raH: ra, dec, mag, name: name || null }));
+  // HYG includes its Sun row (Sol), not a distant J2000 star. Keep raw row IDs
+  // before filtering so existing saved objects never shift when it is excluded.
+  stars = j.stars.map(([ra, dec, mag, name], index) => ({ id: `star:${index}`, raH: ra, dec, mag, name: name || null }))
+    .filter(s => [s.raH, s.dec, s.mag].every(Number.isFinite) && s.name !== 'Sol');
   return stars.length;
 }
 

@@ -6,7 +6,7 @@ A camera-first, sensor-based sky overlay with a manual sky explorer. Camera fram
 
 Enable camera, choose your location, and point toward the sky. Use **Align** to correct heading and pitch and estimate your camera’s diagonal field of view. Phone compasses are imperfect: magnetic north, local interference and browser sensor conventions affect alignment. Manual drag, keyboard arrows and object search remain available without hardware permissions.
 
-* **Sky:** named-object search, planets, 1,023 catalogue stars, 89 constellation figures, 110 Messier objects, filters and directional guidance.
+* **Sky:** named-object search, planets, 1,022 catalogue stars, 89 constellation figures, 110 Messier objects, filters and directional guidance.
 * **Explore:** selected UTC time, return to now, rise/set/transit, Moon phases, astronomical darkness, annual meteor reference dates and a heliocentric solar-system diagram with linear distance scale.
 * **Saved:** favorites and observation notes stored in this browser.
 * **Settings:** saved location, night palette, magnitude, alignment and optional feeds. The initial New York demo location is explicitly labeled; GPS is requested only when chosen.
@@ -35,3 +35,26 @@ Browser release checks: install pinned Playwright 1.58.2 as a development tool, 
 * [Licenses and attribution](docs/THIRD-PARTY.md), [performance](docs/performance.md), [verification](docs/VERIFICATION.md)
 
 Catalogue star coordinates are J2000 rotated with precession/nutation; proper-motion propagation is not included. Astronomy Engine 2.1.19 supplies planetary positions and events; satellite.js 4.1.4 supplies SGP4. The interactive time range is 1900–2100, not a blanket precision guarantee for every object or device. Physical iOS/Android alignment and screen-reader testing remain separate release checks.
+
+## Hindi names and mobile observing
+
+Settings → Object names offers हिन्दी + English (default), हिन्दी, or English. Search accepts English, Hindi and reviewed Romanized aliases. Hindi planet names and 42 curated star labels are available; names outside that curated set keep their original catalogue spelling. Traditional aliases and transliterations are identified in object details. See [the naming sources](docs/hindi-names.md).
+
+Explore separates Tonight and Solar system views. Select a supported object for next rise/set/upper-transit times at the selected UTC instant/location. Settings can save up to 12 named observing locations; Saved reuses/removes them. Tools opens the existing Workbench calculators and optional live-feed controls. The [October 5 milestone](docs/2026-10-05-hindi-mobile.md) records implementation and verification; first-time Pages administration remains a separate publishing gate.
+
+## Human action checklist
+
+This list distinguishes required setup from optional expansion. No account or API key is needed for the current locally calculated stars, planets, constellations, object events or solar-system view. The current satellite and aircraft feeds are public, but availability and quotas are outside this application's control. Never paste private tokens into source files, GitHub Pages assets or public issues.
+
+- [ ] **Required to publish SkyLens — repository administrator:** open [Settings → Pages](https://github.com/occult-kranti/skylens/settings/pages) and select **GitHub Actions** as Source. GitHub has rejected automatic first-time creation with `Resource not accessible by integration`. After saving, rerun the failed deploy job. Confirm the site's `release.json` matches the workflow SHA before calling it live. No new account or paid plan was requested.
+- [ ] **Recommended hosting cleanup — Workbench administrator:** choose GitHub Actions in [the companion Pages settings](https://github.com/occult-kranti/astrology-sim-ant/settings/pages) to stop its legacy branch publisher from competing with the validated workflow.
+- [ ] **Required for a phone-alignment claim — device tester:** on iOS Safari and Android Chrome, allow camera/motion from the app's buttons, choose your actual location, calibrate against a known object, and test portrait/landscape, background/resume and stop/restart. Record OS/browser and measured error using [the checklist](docs/camera-methods.md). Browser mocks do not complete this step.
+- [ ] **Language/accessibility review — Hindi reader and assistive-technology tester:** review editorial transliterations and mixed-script pronunciation, large text, focus and screen-reader order. Supported aliases have sources; they are not a universal Indian sky-name standard.
+- [ ] **Optional sustained aircraft tracking — project owner:** review [AvioADSB's current API terms](https://avioadsb.org/docs/api). Anonymous access needs no account but is limited to 100 requests/day per network and one request / 10 seconds; at the app's 12-second rate, a continuously enabled session can reach that daily allowance in about 20 minutes. The app pauses on quota responses. A higher allowance may require the provider's account/plan and a separately designed secure server integration. No account was created or plan purchased; GitHub Pages cannot safely hide a private API key.
+- [ ] **Optional additional data — feature owner:** identify a provider, license, allowed browser/CORS use, rate limits and validation cases before adding weather, minor bodies or other feeds. NASA/JPL SSD APIs prohibit direct embedding under their published CORS policy; do not work around that restriction. The existing ISS source is CelesTrak station elements, propagated locally.
+
+**Satellite setup:** CelesTrak stations/visual orbital elements need no API key. Data is checked no more often than every two hours; old elements are suppressed by the documented seven-day policy, and retrieval time is separate from element epoch. Tools → Optional satellites & aircraft exposes controls, status and manual checking. These feeds do not track every satellite or every aircraft.
+
+**Constellation names:** all 88 IAU constellations (89 catalogue figure entries because Serpens has two parts) now have Hindi transliterations, English aliases and search. Details explain that guidance points to a label anchor, not a physical star or official boundary. Saptarshi, Pleiades and zodiac sectors are not silently treated as equivalent whole constellations.
+
+Source, licensing, quota and actual browser-delivery evidence: [tracking APIs](docs/tracking-apis.md). The public feeds were browser-readable in the dated release diagnostic; this is not a promise of uninterrupted service or complete coverage.

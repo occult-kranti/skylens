@@ -43,12 +43,18 @@ try {
   const base = origin + basePath;
   browser = await chromium.launch({ headless: true,
     ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {}) });
-  async function contextFor(viewport, camera = 'denied') {
+  async function contextFor(viewport, camera = 'denied', mockSatelliteFailure = false) {
     const context = await browser.newContext({ viewport, reducedMotion: 'reduce', serviceWorkers: 'block' });
-    const unexpected = [], errors = [], badResponses = [];
+    const unexpected = [], errors = [], badResponses = [], satelliteRequests = [];
+    const isSatelliteRequest = url => url.origin === 'https://celestrak.org' && url.pathname === '/NORAD/elements/gp.php' &&
+      ['stations', 'visual'].includes(url.searchParams.get('GROUP')) && url.searchParams.get('FORMAT') === 'tle';
     await context.route('**/*', route => {
       const url = new URL(route.request().url());
       if (url.origin === origin || ['data:', 'blob:'].includes(url.protocol)) return route.continue();
+      if (mockSatelliteFailure && isSatelliteRequest(url)) {
+        satelliteRequests.push(url.href);
+        return route.fulfill({ status: 503, contentType: 'text/plain', body: 'Deliberately unavailable browser fixture' });
+      }
       unexpected.push(url.href);
       return route.abort('blockedbyclient');
     });
@@ -90,9 +96,10 @@ try {
       console.error('Browser error:', e.message);
     });
     page.on('response', response => {
+      if (mockSatelliteFailure && isSatelliteRequest(new URL(response.url())) && response.status() === 503) return;
       if (response.status() >= 400) badResponses.push(response.status() + ' ' + response.url());
     });
-    return { context, page, check: () => {
+    return { context, page, satelliteRequests, check: () => {
       assert.deepEqual(errors, [], 'no uncaught browser errors');
       assert.deepEqual(badResponses, [], 'all local assets resolve under Pages project path');
       assert.deepEqual(unexpected, [], 'no external requests before optional feed is enabled');
@@ -106,7 +113,49 @@ try {
     await page.waitForFunction(({ selector, expected }) =>
       (document.querySelector(selector)?.textContent || '').includes(expected), { selector, expected });
   }
-  for (const [label, viewport] of [['mobile', { width: 390, height: 844 }], ['desktop', { width: 1365, height: 900 }]]) {
+  async function layoutCheck(page, label) {
+    const layout = await page.evaluate(() => ({
+      width: innerWidth, scrollWidth: document.documentElement.scrollWidth,
+      overflowing: [...document.querySelectorAll('button, input, select, textarea, h2')].filter(el =>
+        el.getClientRects().length && !el.closest('[hidden]')).map(el => {
+        const r = el.getBoundingClientRect();
+        return { id: el.id, tag: el.tagName, left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) };
+      }).filter(r => r.right > innerWidth + 1 || r.left < -1).slice(0, 10),
+    }));
+    assert.ok(layout.scrollWidth <= layout.width + 1, label + ' has no page overflow: ' + JSON.stringify(layout));
+  }
+  async function reachable(page, selector) {
+    const control = page.locator(selector);
+    await control.scrollIntoViewIfNeeded();
+    const box = await control.evaluate(el => {
+      const r = el.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height,
+        viewportWidth: innerWidth, viewportHeight: innerHeight, hit: hit === el || el.contains(hit) };
+    });
+    assert.ok(box.width >= 24 && box.height >= 24 && box.left >= -1 && box.right <= box.viewportWidth + 1 &&
+      box.top >= -1 && box.bottom <= box.viewportHeight + 1 && box.hit,
+    selector + ' is visible and directly reachable: ' + JSON.stringify(box));
+  }
+  async function screenshot(page, label, view) {
+    await page.waitForFunction(() => document.querySelector('#toasts')?.childElementCount === 0);
+    await layoutCheck(page, label + ' ' + view);
+    await page.screenshot({ path: resolve(results, label + '-' + view + '.png'), fullPage: true });
+  }
+  async function findObject(page, query, id) {
+    await page.locator('#openSearch').click();
+    await page.locator('#objectSearch').fill(query);
+    const result = page.locator('#searchList [data-object-key="' + id + '"]');
+    await result.waitFor({ state: 'visible' });
+    await result.click();
+    await page.locator('#infocard').waitFor({ state: 'visible' });
+  }
+  async function selectedCoordinates(page) {
+    return page.locator('#infocard').evaluate(el => [...el.querySelectorAll('dt')]
+      .find(dt => dt.textContent === 'Altitude / azimuth')?.nextElementSibling?.textContent);
+  }
+  const viewports = [['small-mobile', { width: 320, height: 568 }], ['mobile', { width: 390, height: 844 }],
+    ['landscape', { width: 844, height: 390 }], ['desktop', { width: 1365, height: 900 }]];
+  for (const [label, viewport] of viewports) {
     const { context, page, check } = await contextFor(viewport);
     try {
       await page.goto(base, { waitUntil: 'domcontentloaded' });
@@ -128,6 +177,22 @@ try {
       await page.locator('#locLon').fill('0');
       await page.locator('#setLoc').click();
       await waitText(page, '#telPos', '51.500');
+      assert.equal(await page.locator('#nameMode').inputValue(), 'bilingual', 'new sessions default to bilingual object names');
+      await page.locator('#savedLocationName').fill('London roof');
+      await page.locator('#saveLocation').click();
+      await waitText(page, '#savedLocationList', 'London roof');
+      await page.locator('#locLat').fill('28.6139');
+      await page.locator('#locLon').fill('77.2090');
+      await page.locator('#setLoc').click();
+      await waitText(page, '#telPos', '28.614');
+      await page.locator('#savedLocationName').fill('Temporary spot');
+      await page.locator('#saveLocation').click();
+      await tab(page, 'saved');
+      await page.locator('#savedLocationList').getByRole('button', { name: 'Remove Temporary spot from saved locations', exact: true }).click();
+      assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use Temporary spot\b/ }).count(), 0);
+      await page.locator('#savedLocationList').getByRole('button', { name: /^Use London roof\b/ }).click();
+      await waitText(page, '#telPos', '51.500');
+      await tab(page, 'settings');
       await page.locator('#alignmentDetails > summary').click();
       await page.locator('#setFov').focus();
       await page.locator('#setFov').press('Home');
@@ -150,23 +215,94 @@ try {
       await page.locator('#simulationBanner').waitFor({ state: 'visible' });
       await waitText(page, '#telTime', '2026-12-14');
       await waitText(page, '#tonightBody', 'Moon');
+      assert.equal(await page.locator('#observingView').isVisible(), true, 'observing view is the initial Explore subview');
+      assert.equal(await page.locator('#solarView').isHidden(), true, 'solar system does not crowd observing results');
       assert.ok(await page.locator('#toasts .toast').count() <= 1, 'transient messages never stack over controls');
-      await page.waitForFunction(() => document.querySelector('#toasts')?.childElementCount === 0);
-      await page.screenshot({ path: resolve(results, label + '-explore.png'), fullPage: true });
+      await page.locator('#tonightBody').scrollIntoViewIfNeeded();
+      await screenshot(page, label, 'observing');
+      await page.locator('#exploreSolar').click();
+      await page.locator('#orbitView svg').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#observingView').isHidden(), true, 'solar and observing subviews are distinct');
+      await reachable(page, '#exploreTonight');
+      await page.locator('#orbitView svg').scrollIntoViewIfNeeded();
+      await screenshot(page, label, 'solar');
+      await page.locator('#exploreSolar').press('ArrowLeft');
+      assert.equal(await page.locator('#exploreTonight').getAttribute('aria-selected'), 'true', 'Explore subviews support arrow-key navigation');
+      await tab(page, 'settings');
+      await page.locator('#nameMode').selectOption('hi');
+      await findObject(page, 'ओरायन', 'const:Ori:59');
+      await waitText(page, '#infocard h2', 'ओरायन');
+      await waitText(page, '#infocard', 'Anchor altitude / azimuth');
+      await waitText(page, '#infocard', 'anchor');
+      await page.locator('#objectEvents[aria-busy="false"]').waitFor();
+      assert.equal(await page.locator('#objectEvents dt').count(), 0, 'a constellation figure does not invent single-object rise/set events');
+      await page.locator('#infocard').getByRole('button', { name: /^Save object$/ }).click();
+      await page.locator('#infocard h2').scrollIntoViewIfNeeded();
+      await screenshot(page, label, 'hindi-constellation');
+      await findObject(page, 'Orion', 'const:Ori:59');
+      await waitText(page, '#infocard h2', 'ओरायन');
+      assert.equal(await page.locator('#infocard [data-action="save"]').getAttribute('aria-pressed'), 'true', 'English constellation alias retains saved canonical identity');
+      await findObject(page, 'मंगल', 'body:Mars');
+      await waitText(page, '#infocard h2', 'मंगल');
+      const hindiCoordinates = await selectedCoordinates(page);
+      assert.ok(hindiCoordinates && hindiCoordinates.includes('°'), 'selected object has measured coordinate details');
+      assert.ok(await page.locator('#infocard h2 [lang="hi"]').count(), 'Hindi object names have an explicit language annotation');
+      await page.locator('#objectEvents[aria-busy="false"]').waitFor();
+      assert.deepEqual(await page.locator('#objectEvents dt').allTextContents(), ['Rise', 'Transit', 'Set'], 'object details calculate all three observing events');
+      assert.match(await page.locator('#objectEvents').textContent(), /2026-12-\d{2} \d{2}:\d{2} UTC/, 'object event times are dated and explicitly UTC');
+      await page.locator('#infocard').getByRole('button', { name: /^Save object$/ }).click();
+      await reachable(page, '#infocard [data-action="save"]');
+      await page.locator('#infocard h2').scrollIntoViewIfNeeded();
+      await screenshot(page, label, 'hindi-object');
+      if (label === 'mobile') {
+        const permissions = await page.evaluate(() => ({ camera: window.__capabilityTest.cameraCalls, geo: window.__capabilityTest.geoCalls }));
+        await page.setViewportSize({ width: 844, height: 390 });
+        await waitText(page, '#infocard h2', 'मंगल');
+        await layoutCheck(page, 'rotation keeps selected Hindi object within viewport');
+        await reachable(page, '#infocard [data-action="save"]');
+        assert.deepEqual(await page.evaluate(() => ({ camera: window.__capabilityTest.cameraCalls, geo: window.__capabilityTest.geoCalls })), permissions,
+          'rotation does not request permissions again');
+        await page.setViewportSize(viewport);
+      }
+      await page.locator('#infocard').getByRole('button', { name: 'Close object details', exact: true }).click();
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.objectKey), 'body:Mars', 'closing details restores focus to its current result');
+      await tab(page, 'settings');
+      await page.locator('#nameMode').selectOption('en');
+      await findObject(page, 'मंगल', 'body:Mars');
+      await waitText(page, '#infocard h2', 'Mars');
+      assert.equal(await selectedCoordinates(page), hindiCoordinates, 'language changes preserve fixed-time astronomical coordinates');
+      await tab(page, 'settings');
+      await page.locator('#nameMode').selectOption('hi');
+      await findObject(page, 'Mars', 'body:Mars');
+      await waitText(page, '#infocard h2', 'मंगल');
+      await tab(page, 'tools');
+      assert.equal(await page.locator('#panelTools').isVisible(), true, 'Tools is a reachable main destination');
+      await waitText(page, '#toolsTime', 'Simulated · 2026-12-14 22:00:00 UTC');
+      await waitText(page, '#toolsLocation', 'London roof');
+      await waitText(page, '#toolsLocation', '51.500');
+      await waitText(page, '#toolsCalculation', 'Astronomy Engine');
+      await waitText(page, '#toolsFeedStatus', 'Satellites off · Aircraft off');
+      assert.equal(await page.locator('#setPlanes').isChecked(), false, 'tools navigation does not enable location-sharing aircraft feed');
       await page.locator('#returnLive').click();
       await page.locator('#simulationBanner').waitFor({ state: 'hidden' });
       await page.goto(base + '?manual=1&nointro=1&dock=settings', { waitUntil: 'domcontentloaded' });
       await page.locator('#panelSettings').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#setFov').inputValue(), '31', 'FOV persisted');
       assert.equal(await page.locator('#setNight').isChecked(), true, 'night preference persisted');
+      assert.equal(await page.locator('#nameMode').inputValue(), 'hi', 'Hindi name preference persisted');
       await waitText(page, '#telPos', '51.500');
+      await reachable(page, '#nameMode');
+      await screenshot(page, label, 'settings-hindi');
       await tab(page, 'saved');
-      await waitText(page, '#savedList', 'Sirius');
+      assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use London roof\b/ }).count(), 1, 'saved location survives reload without duplicate rows');
+      assert.equal(await page.locator('#savedLocationList').getByRole('button', { name: /^Use Temporary spot\b/ }).count(), 0, 'location removal persists');
+      await waitText(page, '#savedList', 'मंगल');
+      assert.equal(await page.locator('#savedList [data-object-key="body:Mars"]').count(), 1, 'Hindi favourites retain canonical identity');
+      assert.equal(await page.locator('#savedList [data-object-key="const:Ori:59"]').count(), 1, 'Hindi constellation favourites persist without duplicate identities');
       assert.match(await page.locator('#observationNote').inputValue(), /clear northern horizon/, 'note persisted');
-      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal viewport overflow');
-      await page.screenshot({ path: resolve(results, label + '-saved.png'), fullPage: true });
+      await layoutCheck(page, label + ' saved');
       check();
-      completed.push(label + ': permission denial, manual keyboard, location fallback/input, search/select/save, UTC simulation, persistence, Pages base path, no external requests');
+      completed.push(label + ': camera denial/manual, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests');
     } catch (error) {
       browserDiagnostics.push({ label, state: await page.evaluate(() => ({
         focus: document.activeElement?.id, aim: document.querySelector('#telAim')?.textContent,
@@ -174,6 +310,39 @@ try {
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       })).catch(() => null) });
       await page.screenshot({ path: resolve(results, label + '-failure.png'), fullPage: true }).catch(() => {});
+      throw error;
+    } finally { await context.close(); }
+  }
+  // A mocked 503 proves visible feed failure and privacy behavior, not live API availability.
+  {
+    const { context, page, check, satelliteRequests } = await contextFor({ width: 390, height: 844 }, 'denied', true);
+    try {
+      await page.goto(base + '?manual=1&nointro=1&dock=tools', { waitUntil: 'domcontentloaded' });
+      await page.locator('#panelTools').waitFor({ state: 'visible' });
+      await waitText(page, '#toolsTime', 'Live');
+      await waitText(page, '#toolsLocation', 'Demo: New York');
+      assert.equal(satelliteRequests.length, 0, 'opening Tools does not request an external feed');
+      await page.locator('#trafficDetails > summary').click();
+      await reachable(page, '#refreshSatellites');
+      await page.locator('#refreshSatellites').click();
+      await page.locator('#refreshSatellites[aria-busy="false"]').waitFor();
+      await waitText(page, '#satRefreshStatus', 'Live orbital data could not be fully refreshed. Previously retrieved or bundled records may remain; old elements are hidden.');
+      await waitText(page, '#satRefreshStatus', 'Next online check no earlier than');
+      assert.deepEqual(satelliteRequests.map(url => new URL(url).searchParams.get('GROUP')), ['stations'],
+        'the first upstream failure stops the remaining orbital group request');
+      await page.locator('#refreshSatellites').click();
+      await page.locator('#refreshSatellites[aria-busy="false"]').waitFor();
+      await waitText(page, '#satRefreshStatus', 'Live orbital data could not be fully refreshed.');
+      assert.equal(satelliteRequests.length, 1, 'repeated checks within the two-hour window reuse fallback metadata without another upstream request');
+      assert.equal(await page.locator('#setSats').isChecked(), false, 'refreshing does not enable the satellite layer');
+      assert.equal(await page.locator('#setPlanes').isChecked(), false, 'refreshing does not enable aircraft requests');
+      await waitText(page, '#toolsFeedStatus', 'Satellites off · Aircraft off');
+      await page.locator('#satRefreshStatus').scrollIntoViewIfNeeded();
+      await screenshot(page, 'mobile', 'orbital-feed-failure');
+      check();
+      completed.push('explicit orbital refresh: one mocked 503 stops further requests, repeated check honors two-hour window, visible fallback/failure status, no implicit feed enablement or aircraft request; live API availability not tested');
+    } catch (error) {
+      await page.screenshot({ path: resolve(results, 'orbital-feed-failure-diagnostic.png'), fullPage: true }).catch(() => {});
       throw error;
     } finally { await context.close(); }
   }
