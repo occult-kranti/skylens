@@ -1,5 +1,14 @@
 # Release verification — 2026-10-03
 
+## Current publication status — live
+
+[SkyLens](https://occult-kranti.github.io/skylens/) was published successfully on October 5, 2026 at 2:02 p.m. America/New_York (18:02 UTC). After the user enabled GitHub Actions as the Pages source, [run 37329557778 attempt 2](https://github.com/occult-kranti/skylens/actions/runs/37329557778/attempts/2) completed successfully. Deploy job 111908177216 passed Configure Pages, Deploy validated artifact and Verify published release identity. Its log verified `367f6ee8b5ea63478e61f07e17860324ad3097bb`; an independent public fetch of [release.json](https://occult-kranti.github.io/skylens/release.json) returned the same SHA and `validation: node-and-playwright`. The homepage was available over HTTPS.
+
+The published application includes the direct Show Hindi / Hide Hindi control from PR #7. The initial publishing blocker is resolved, and the README human-action checkbox has been marked complete. No calculation or application code changed during deployment recovery. Future documentation or application commits receive their own workflow and release identity.
+
+The historical checkpoints below describe the earlier implementation and failed attempts; their administration warnings are superseded by this successful launch. Physical phone alignment and screen-reader validation remain pending.
+
+
 Owning repository: occult-kranti/skylens. Companion calculators: occult-kranti/astrology-sim-ant. The supplied astro-sim-ant URL returned404; it is not a second name for either repository.
 
 ## Local evidence
