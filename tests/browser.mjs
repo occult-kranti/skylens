@@ -167,6 +167,9 @@ try {
         let top = Math.max(0, box.top), bottom = Math.min(innerHeight, box.bottom);
         for (let parent = element.parentElement; parent; parent = parent.parentElement) {
           const style = getComputedStyle(parent), bounds = parent.getBoundingClientRect();
+          // display:contents generates no box, so its inherited overflow value
+          // cannot clip the fixed tool surfaces that remain in its DOM subtree.
+          if (style.display === 'contents') continue;
           if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
             left = Math.max(left, bounds.left + parent.clientLeft);
             right = Math.min(right, bounds.left + parent.clientLeft + parent.clientWidth);
