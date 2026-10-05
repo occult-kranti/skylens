@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as AE from '../vendor/astronomy.js';
-import { parseSimulationTime, normalizePreferences, readPreferences, validLocation, searchCatalogue, createSkyCache, shouldRenderFrame } from '../js/main.js';
+import { parseSimulationTime, normalizePreferences, readPreferences, validLocation, searchCatalogue, createSkyCache, shouldRenderFrame, normalizeSavedLocations, addSavedLocation } from '../js/main.js';
+import { fitLabel } from '../js/render.js';
 import { engineReady, loadStars, visibleStars, horizontalProjector, computeBodies } from '../js/sky.js';
 import { loadConstellations, loadDSOs, constellationFrame, dsoFrame } from '../js/objects.js';
 import { startPlanes } from '../js/planes.js';
@@ -71,11 +72,52 @@ test('search covers below-horizon stars and all 110 Messier objects with stable 
   const date = new Date('2026-10-03T21:00:00Z');
   const stars = visibleStars(date, 51.5, -.1, 4.6, -90);
   const dsos = dsoFrame(date, 51.5, -.1, Infinity, -90);
-  assert.equal(stars.length, 1023); assert.equal(dsos.length, 110);
+  assert.equal(stars.length, 1022); assert.equal(dsos.length, 110);
+  assert.equal(stars.some(s => s.name === 'Sol'), false, 'the solar ephemeris is the only Sun');
+  const rawStars = JSON.parse(readFileSync(new URL('../data/stars.json', import.meta.url))).stars;
+  const siriusIndex = rawStars.findIndex(s => s[3] === 'Sirius');
+  assert.equal(stars.find(s => s.name === 'Sirius').id, `star:${siriusIndex}`, 'excluding Sol must preserve saved IDs');
   const below = stars.find(s => s.name && s.alt < 0);
   const results = searchCatalogue([...stars, ...dsos], below.name, [below.id]);
   assert.equal(results[0].id, below.id); assert.equal(results[0].belowHorizon, true); assert.equal(results[0].favourite, true);
   assert.equal(searchCatalogue(dsos, 'M31')[0].id, 'dso:M31');
+});
+
+test('Hindi search and display preferences preserve canonical object identities', () => {
+  const bodies = computeBodies(new Date('2026-10-05T12:00:00Z'), 28.6, 77.2);
+  for (const query of ['मंगल', 'Mangal', 'Mars']) assert.equal(searchCatalogue(bodies, query)[0].id, 'body:Mars');
+  assert.equal(normalizePreferences().nameMode, 'bilingual');
+  assert.equal(normalizePreferences({ nameMode: '<script>' }).nameMode, 'bilingual');
+  for (const nameMode of ['hi', 'en', 'bilingual']) {
+    const prefs = readPreferences({ getItem: () => JSON.stringify({ nameMode, favourites: ['body:Mars'] }) });
+    assert.equal(prefs.nameMode, nameMode); assert.deepEqual(prefs.favourites, ['body:Mars']);
+  }
+});
+
+test('named observing locations validate, persist and retain zero coordinates', () => {
+  const input = [{ id: 'place:test', name: 'दिल्ली', lat: 0, lon: 0 },
+    { id: 'place:bad', name: 'Bad latitude', lat: 95, lon: 0 },
+    { id: 'place:test', name: 'duplicate ID', lat: 1, lon: 2 }];
+  const list = normalizeSavedLocations(input);
+  assert.deepEqual(list, [input[0]]);
+  assert.deepEqual(readPreferences({ getItem: () => JSON.stringify({ savedLocations: input }) }).savedLocations, list);
+  assert.deepEqual(normalizeSavedLocations(null), []);
+  assert.equal(addSavedLocation(list, 'दिल्ली', { lat: 20, lon: 30 }, 'place:new').ok, false);
+  assert.equal(addSavedLocation(list, '', { lat: 20, lon: 30 }, 'place:new').ok, false);
+  assert.equal(addSavedLocation(list, 'x'.repeat(41), { lat: 20, lon: 30 }, 'place:new').ok, false);
+  assert.equal(addSavedLocation(list, 'Invalid', { lat: 20, lon: Infinity }, 'place:new').ok, false);
+  const result = addSavedLocation(list, 'London', { lat: 51.5, lon: 0 }, 'place:london');
+  assert.equal(result.ok, true); assert.equal(result.locations[1].lon, 0); assert.equal(list.length, 1);
+  const full = Array.from({ length: 12 }, (_, i) => ({ id: `place:${i}`, name: `Site ${i}`, lat: 0, lon: i }));
+  assert.equal(addSavedLocation(full, 'Another', { lat: 0, lon: 0 }, 'place:13').ok, false);
+});
+
+test('canvas label shortening keeps complete Devanagari graphemes', () => {
+  const segmenter = new Intl.Segmenter('hi', { granularity: 'grapheme' });
+  const measure = value => Array.from(segmenter.segment(value)).length;
+  assert.equal(fitLabel('शुक्र · Venus', 3, measure), 'शुक्र…');
+  assert.equal(fitLabel('सूर्य', 20, measure), 'सूर्य');
+  assert.equal(fitLabel('शुक्र', 0, measure), '');
 });
 
 test('shared J2000 matrix adapter agrees with Astronomy Engine public vector API', () => {

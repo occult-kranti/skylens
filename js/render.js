@@ -1,6 +1,17 @@
 // render.js — canvas overlay: alt-az grid, constellation figures, stars, DSOs,
 // bodies, satellites, planes, locate guidance. Double-drawn text for legibility.
 import { vecFromAltAz, projectVec, clamp } from './astro.js';
+import { displayName } from './names.js';
+
+const labelFont = size => `500 ${size}px system-ui, "Nirmala UI", "Noto Sans Devanagari", sans-serif`;
+const graphemes = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('hi', { granularity: 'grapheme' }) : null;
+export function fitLabel(value, maxWidth, measure) {
+  const text = String(value || '');
+  if (measure(text) <= maxWidth) return text;
+  const parts = graphemes ? Array.from(graphemes.segment(text), part => part.segment) : Array.from(text);
+  while (parts.length && measure(parts.join('') + '…') > maxWidth) parts.pop();
+  return parts.length ? parts.join('') + '…' : '';
+}
 
 export const PALETTES = {
   normal: {
@@ -54,7 +65,7 @@ export function createRenderer(canvas) {
   window.addEventListener('resize', resize);
 
   function text(str, x, y, color, size = 11, align = 'center') {
-    ctx.font = `500 ${size}px "Fira Code", ui-monospace, monospace`;
+    ctx.font = labelFont(size);
     ctx.textAlign = align;
     ctx.fillStyle = PAL.shadow; ctx.fillText(str, x + 1, y + 1);
     ctx.fillStyle = color; ctx.fillText(str, x, y);
@@ -71,9 +82,10 @@ export function createRenderer(canvas) {
       : projectVec(vecFromAltAz(alt, az), basis, tanH, tanV, w, h);
     const labels = [];
     const label = (str, x, y, color, size = 11, priority = 10, align = 'center') => {
-      ctx.font = `500 ${size}px "Fira Code", ui-monospace, monospace`;
+      ctx.font = labelFont(size);
       const key = str;
-      while (str.length > 4 && ctx.measureText(str).width > w - 24) str = str.slice(0, -2).trimEnd() + '…';
+      str = fitLabel(str, w - 24, text => ctx.measureText(text).width);
+      if (!str) return;
       const width = ctx.measureText(str).width;
       if (priority >= 100) { x = clamp(x, width / 2 + 10, w - width / 2 - 10); y = clamp(y, size + 10, h - 10); }
       labels.push({ str, key, x, y, color, size, priority, align, width, height: size });
@@ -162,7 +174,7 @@ export function createRenderer(canvas) {
         ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.2832); ctx.fill();
         drawn.push({ x: p.x, y: p.y, r: Math.max(12, r + 6), kind: 'star', data: s });
         if (scene.layers.labels && s.name && s.mag <= 1.6) {
-          label(s.name, p.x, p.y - 7, PAL.starLabel, 10, 30 - s.mag);
+          label(displayName(s, scene.nameMode), p.x, p.y - 7, PAL.starLabel, 12, 30 - s.mag);
         }
       }
     }
@@ -180,8 +192,9 @@ export function createRenderer(canvas) {
       } else {
         ctx.fillStyle = PAL.planet; ctx.beginPath(); ctx.arc(p.x, p.y, 3.6, 0, 6.2832); ctx.fill();
       }
-      const lbl = b.kind === 'moon' && b.phase != null ? `${b.name} ${(b.phase * 100) | 0}%` : b.name;
-      if (scene.layers.labels) label(lbl, p.x, p.y - 10, b.kind === 'planet' ? PAL.planet : PAL.sun, 11, 50);
+      const name = displayName(b, scene.nameMode);
+      const lbl = b.kind === 'moon' && b.phase != null ? `${name} ${(b.phase * 100) | 0}%` : name;
+      if (scene.layers.labels) label(lbl, p.x, p.y - 10, b.kind === 'planet' ? PAL.planet : PAL.sun, 12, 50);
       drawn.push({ x: p.x, y: p.y, r: 16, kind: b.kind, data: b });
     }
 
@@ -223,7 +236,7 @@ export function createRenderer(canvas) {
         ctx.strokeStyle = PAL.highlight; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
         ctx.beginPath(); ctx.arc(p.x, p.y, pulse, 0, 6.2832); ctx.stroke();
         ctx.setLineDash([]);
-        label(t.label, p.x, p.y - pulse - 6, PAL.highlight, 11, 100);
+        label(displayName(t, scene.nameMode), p.x, p.y - pulse - 6, PAL.highlight, 12, 100);
       } else if (scene.centerAz != null) {
         // off-screen: chevron at the screen edge pointing toward the target
         const target = vecFromAltAz(t.alt, t.az);
@@ -238,7 +251,7 @@ export function createRenderer(canvas) {
         ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(2, 0); ctx.lineTo(-7, 7); ctx.stroke();
         ctx.restore();
         label(`${angle.toFixed(0)}° away${t.alt < 0 ? ' · below horizon' : ''}`, ex, ey + 20, PAL.highlight, 10, 100);
-        label(t.label, ex, ey - 16, PAL.highlight, 10, 100);
+        label(displayName(t, scene.nameMode), ex, ey - 16, PAL.highlight, 12, 100);
       }
     }
 

@@ -8,12 +8,36 @@ import { startPlanes } from './planes.js';
 import * as S from './sensors.js';
 import { createRenderer, PALETTES } from './render.js';
 import { createUI } from './ui.js';
+import { displayName, searchNames, NAME_MODES } from './names.js';
+import { calculateObjectEvents } from './observing.js';
 
 const PREFS_KEY = 'skylens.preferences.v2';
 const DEMO_LOC = { lat: 40.7128, lon: -74.006, source: 'demo (New York)' };
 const DEFAULT_LAYERS = { grid: true, labels: true, stars: true, bodies: true, constellations: true, dsos: true, sats: false, planes: false };
 export function validLocation(loc) {
   return !!loc && Number.isFinite(loc.lat) && Math.abs(loc.lat) <= 90 && Number.isFinite(loc.lon) && Math.abs(loc.lon) <= 180;
+}
+export function normalizeSavedLocations(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value.flatMap(item => {
+    if (!item || !validLocation(item) || typeof item.id !== 'string' || !/^place:[\w-]{1,80}$/.test(item.id) || seen.has(item.id)) return [];
+    const name = typeof item.name === 'string' ? item.name.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 40) : '';
+    if (!name) return [];
+    seen.add(item.id);
+    return [{ id: item.id, name, lat: item.lat, lon: item.lon }];
+  }).slice(0, 12);
+}
+export function addSavedLocation(locations, name, loc, id) {
+  const list = normalizeSavedLocations(locations);
+  const clean = typeof name === 'string' ? name.replace(/[\u0000-\u001f\u007f]/g, '').trim() : '';
+  if (!clean || clean.length > 40) return { ok: false, message: 'Enter a location name of 1–40 characters.' };
+  if (!validLocation(loc)) return { ok: false, message: 'Choose valid coordinates before saving.' };
+  if (list.some(item => item.name.toLocaleLowerCase() === clean.toLocaleLowerCase())) return { ok: false, message: 'That name is already saved. Choose a different name.' };
+  if (list.length >= 12) return { ok: false, message: 'Twelve locations are saved. Remove one before adding another.' };
+  const next = normalizeSavedLocations([...list, { id, name: clean, lat: loc.lat, lon: loc.lon }]);
+  if (next.length !== list.length + 1) return { ok: false, message: 'The location could not be saved. Try again.' };
+  return { ok: true, locations: next, message: `${clean} saved on this device.` };
 }
 export function parseSimulationTime(value) {
   if (value == null || value === '' || value === 'now') return null;
@@ -34,6 +58,8 @@ export function normalizePreferences(raw = {}) {
   let selectedTime = null;
   try { selectedTime = parseSimulationTime(raw.selectedTime); } catch { /* corrupt saved time -> live */ }
   return { loc: validLocation(raw.loc) ? { ...raw.loc } : { ...DEMO_LOC },
+    nameMode: NAME_MODES.includes(raw.nameMode) ? raw.nameMode : 'bilingual',
+    savedLocations: normalizeSavedLocations(raw.savedLocations),
     fov: finite(raw.fov, 70, 30, 120), magLimit: finite(raw.magLimit, 4.6, 2, 4.6),
     headingOffset: finite(raw.headingOffset, 0, -180, 180), pitchOffset: finite(raw.pitchOffset, 0, -45, 45),
     night: raw.night === true, refraction: raw.refraction === true, layers, selectedTime,
@@ -45,7 +71,7 @@ export function readPreferences(storage) {
 }
 export function searchCatalogue(objects, query, favourites = []) {
   const q = String(query || '').trim().toLocaleLowerCase();
-  return objects.filter(o => o.name && (!q || [o.name, o.altName, o.kind].some(x => String(x || '').toLocaleLowerCase().includes(q))))
+  return objects.filter(o => o.name && (!q || searchNames(o, q) || [o.altName, o.kind].some(x => String(x || '').toLocaleLowerCase().includes(q))))
     .sort((a, b) => Number(favourites.includes(b.id)) - Number(favourites.includes(a.id)) ||
       Number(b.alt >= 0) - Number(a.alt >= 0) || (a.mag ?? 99) - (b.mag ?? 99) || a.name.localeCompare(b.name))
     .slice(0, 50).map(o => ({ ...o, belowHorizon: o.alt < 0, favourite: favourites.includes(o.id) }));
@@ -90,7 +116,8 @@ export function createApplication() {
   let smoothed = null, previousFrame = null, lastTelemetry = 0, lastMessage = '', lastEventsKey = '', query = '';
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const ui = createUI({ relocate, locate, startCamera: enableCamera, stopCamera: () => stopCamera('off'),
-    setTime, search, toggleFavourite });
+    setTime, search, toggleFavourite, saveLocation, useLocation, removeLocation, objectEvents });
+  const observingCache = new Map();
   const dateNow = () => state.selectedTime ? new Date(state.selectedTime) : new Date();
   const cache = createSkyCache((date, loc, settings) => {
     const stars = visibleStars(date, loc.lat, loc.lon, 4.6, -90, settings.refraction);
@@ -105,8 +132,47 @@ export function createApplication() {
   });
 
   function persist() {
-    try { storage?.setItem(PREFS_KEY, JSON.stringify(normalizePreferences(state))); }
-    catch { /* calculations work when storage is full/unavailable */ }
+    try {
+      if (!storage) return false;
+      storage.setItem(PREFS_KEY, JSON.stringify(normalizePreferences(state)));
+      return true;
+    } catch { return false; }
+  }
+  function saveLocation(name) {
+    const id = `place:${globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2)}`;
+    const result = addSavedLocation(state.savedLocations, name, state.loc, id);
+    if (!result.ok) return result;
+    state.savedLocations = result.locations;
+    const stored = persist(); updateSaved();
+    return { ok: true, message: stored ? result.message : 'Saved for this session only. Browser storage is unavailable.' };
+  }
+  function useLocation(id) {
+    const loc = state.savedLocations.find(item => item.id === id);
+    if (!loc) return { ok: false, message: 'That saved location is unavailable.' };
+    applySettings({ loc: { lat: loc.lat, lon: loc.lon, name: loc.name, source: 'saved' } });
+    ui.toast(`Using ${loc.name}.`);
+    return { ok: true, message: `Using ${loc.name}.` };
+  }
+  function removeLocation(id) {
+    const before = state.savedLocations.length;
+    state.savedLocations = state.savedLocations.filter(item => item.id !== id);
+    if (before === state.savedLocations.length) return { ok: false, message: 'That saved location is unavailable.' };
+    const stored = persist(); updateSaved();
+    return { ok: true, message: stored ? 'Saved location removed.' : 'Removed for this session only. Browser storage is unavailable.' };
+  }
+  async function objectEvents(item) {
+    const date = dateNow(), loc = { ...state.loc };
+    const source = snapshot.catalogue.find(o => o.id === item.id) || item;
+    // A rise/set can cross "now" within a single minute. Reuse only the exact
+    // selected instant so a cached event can never become a past "next" event.
+    const key = [source.id || source.name, date.getTime(), loc.lat, loc.lon].join('|');
+    if (observingCache.has(key)) return observingCache.get(key);
+    const ae = engine || await engineReady;
+    if (!ae) return { error: 'The astronomy engine is unavailable.', note: 'Reload to retry.' };
+    const result = calculateObjectEvents(ae, source, date, loc);
+    if (observingCache.size >= 32) observingCache.delete(observingCache.keys().next().value);
+    observingCache.set(key, result);
+    return result;
   }
   function updateSaved() {
     state.savedObjects = snapshot.catalogue.filter(o => state.favourites.includes(o.id));
@@ -120,7 +186,8 @@ export function createApplication() {
     state.selectedId = known?.id || null;
     state.highlight = { ...target, label: target.name || target.label || 'Selected object' };
     if (state.mode === 'manual') { state.az = target.az; state.alt = X.clamp(target.alt, -89, 89); }
-    ui.toast(target.alt < 0 ? `${state.highlight.label} is below the horizon.` : `Guiding to ${state.highlight.label}.`);
+    const title = displayName(state.highlight, state.nameMode);
+    ui.toast(target.alt < 0 ? `${title} is below the horizon.` : `Guiding to ${title}.`);
   }
   function toggleFavourite(item) {
     const id = typeof item === 'string' ? item : item?.id;
@@ -146,6 +213,7 @@ export function createApplication() {
     smoothed = null; persist();
     if (patch.loc || 'magLimit' in patch || 'refraction' in patch) refreshSky(true);
     ui.syncSettings?.(state);
+    if ('nameMode' in patch) { lastEventsKey = ''; refreshSky(); }
     if (patch.loc && aircraft) { aircraft.stop(); aircraft = null; state.planes = []; }
     syncFeeds();
   }
@@ -237,7 +305,7 @@ export function createApplication() {
     ui.skyList(snapshot.bodies.filter(b => b.alt > -6), snapshot.stars.filter(s => s.name && s.alt > 0).slice(0, 8));
     ui.satList(state.sats, state.tleMeta); ui.planeList(state.planes, state.planeStatus, state.planeAge);
     ui.searchResults?.(search(query)); updateSaved();
-    const eventKey = [state.selectedTime || Math.floor(date.getTime() / 60000), state.loc.lat, state.loc.lon].join('|');
+    const eventKey = [state.selectedTime || Math.floor(date.getTime() / 60000), state.loc.lat, state.loc.lon, state.nameMode].join('|');
     if (engine && eventKey !== lastEventsKey) {
       lastEventsKey = eventKey;
       try {
@@ -278,7 +346,7 @@ export function createApplication() {
       constellations: state.layers.constellations ? snapshot.constellations : null,
       dsos: state.layers.dsos ? snapshot.renderDSOs : null,
       highlight: state.highlight, layers: state.layers, palette: state.night ? PALETTES.night : PALETTES.normal,
-      centerAz: az, centerAlt: alt, horizonOnly: !!cameraSession, reducedMotion: reducedMotion.matches });
+      centerAz: az, centerAlt: alt, horizonOnly: !!cameraSession, reducedMotion: reducedMotion.matches, nameMode: state.nameMode });
     if (timestamp - lastTelemetry > 250) {
       lastTelemetry = timestamp;
       ui.telemetry({ loc: state.loc, az, alt, date: dateNow(), isLive: !state.selectedTime,

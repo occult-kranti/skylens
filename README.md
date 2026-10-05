@@ -35,3 +35,9 @@ Browser release checks: install pinned Playwright 1.58.2 as a development tool, 
 * [Licenses and attribution](docs/THIRD-PARTY.md), [performance](docs/performance.md), [verification](docs/VERIFICATION.md)
 
 Catalogue star coordinates are J2000 rotated with precession/nutation; proper-motion propagation is not included. Astronomy Engine 2.1.19 supplies planetary positions and events; satellite.js 4.1.4 supplies SGP4. The interactive time range is 1900–2100, not a blanket precision guarantee for every object or device. Physical iOS/Android alignment and screen-reader testing remain separate release checks.
+
+## Hindi names and mobile observing
+
+Settings → Object names offers हिन्दी + English (default), हिन्दी, or English. Search accepts English, Hindi and reviewed Romanized aliases. Hindi planet names and42 curated star labels are available; names outside that curated set keep their original catalogue spelling. Traditional aliases and transliterations are identified in object details. See[the naming sources](docs/hindi-names.md).
+
+Explore separates Tonight and Solar system views. Select a supported object for next rise/set/upper-transit times at the selected UTC instant/location. Settings can save up to12 named observing locations; Saved reuses/removes them. Tools opens the existing Workbench calculators and optional live-feed controls. The[October5 milestone](docs/2026-10-05-hindi-mobile.md) records implementation and verification; first-time Pages administration remains a separate publishing gate.

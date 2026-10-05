@@ -43,15 +43,15 @@
       <div class="tabs" role="tablist" aria-label="Sky tools">
         <button class="tab active" id="tabSky" role="tab" aria-selected="true" aria-controls="panelSky" data-tab="sky">Sky</button>
         <button class="tab" id="tabExplore" role="tab" aria-selected="false" aria-controls="panelExplore" tabindex="-1" data-tab="tonight">Explore</button>
-        <button class="tab" id="tabTraffic" role="tab" aria-selected="false" aria-controls="panelTraffic" tabindex="-1" data-tab="traffic">Traffic</button>
+        <button class="tab" id="tabTools" role="tab" aria-selected="false" aria-controls="panelTools" tabindex="-1" data-tab="tools">Tools</button>
         <button class="tab" id="tabSaved" role="tab" aria-selected="false" aria-controls="panelSaved" tabindex="-1" data-tab="saved">Saved</button>
         <button class="tab" id="tabSettings" role="tab" aria-selected="false" aria-controls="panelSettings" tabindex="-1" data-tab="settings">Settings</button>
       </div>
 
       <section class="panel active" id="panelSky" role="tabpanel" aria-labelledby="tabSky" data-panel="sky">
         <label for="objectSearch">Find a star, planet or deep-sky object</label>
-        <input id="objectSearch" type="search" placeholder="Try Moon, Sirius or M31" autocomplete="off" aria-describedby="searchMeta">
-        <p id="searchMeta" class="meta" role="status">Search the supported catalog, including objects below the horizon.</p>
+        <input id="objectSearch" type="search" placeholder="Try चंद्रमा, Moon, Surya or M31" autocomplete="off" aria-describedby="searchMeta">
+        <p id="searchMeta" class="meta" role="status">Search in Hindi, English or reviewed Romanized names, including objects below the horizon.</p>
         <ul id="searchList" hidden></ul>
         <div id="skyListGroup"><h2 class="sect">Bright objects above the horizon</h2><ul id="skyList"><li class="empty">Loading the sky catalog…</li></ul></div>
         <button id="stopGuidance" class="subtle" type="button">Stop guidance</button>
@@ -67,21 +67,37 @@
           </div>
           <div class="setrow"><label for="setMag">Star magnitude limit</label><input type="range" id="setMag" min="2" max="4.6" step="0.1"><output id="magVal" for="setMag"></output></div>
         </details>
-        <nav class="related" aria-label="Related calculators"><a href="https://occult-kranti.github.io/astrology-sim-ant/pages/book3/nativity.html">Astrology charts ↗</a><a href="https://occult-kranti.github.io/astrology-sim-ant/pages/calendars.html">Calendars &amp; tools ↗</a></nav>
+        <button id="openTools" class="subtle" type="button">Charts, calendars &amp; other tools</button>
       </section>
 
       <section class="panel" id="panelExplore" role="tabpanel" aria-labelledby="tabExplore" data-panel="tonight" hidden>
         <h2>Explore a moment</h2>
         <form id="timeForm"><label for="skyTime">Date and time (UTC)</label><div class="inputrow"><input type="datetime-local" id="skyTime" min="1900-01-01T00:00" max="2100-12-31T23:59" required><button type="submit">Set time</button><button id="timeNow" type="button">Now</button></div></form>
         <p class="meta">UTC, not your device’s local time. Supported exploration: 1900–2100. Live traffic is unavailable for simulated time.</p>
-        <h2 class="sect">Observing conditions</h2>
-        <div id="tonightBody" class="cards"><p class="empty">Loading astronomical calculations…</p></div>
-        <p class="meta">Event times are UTC. “No event” can occur at high latitudes. Meteor ZHR is an ideal reference rate, not a local forecast.</p>
-        <section id="orbitView" aria-label="Solar system view"></section>
+        <div class="view-switcher" role="tablist" aria-label="Explore view">
+          <button id="exploreTonight" type="button" role="tab" aria-selected="true" aria-controls="observingView" data-explore="tonight">Tonight</button>
+          <button id="exploreSolar" type="button" role="tab" aria-selected="false" aria-controls="solarView" tabindex="-1" data-explore="solar">Solar system</button>
+        </div>
+        <section id="observingView" role="tabpanel" aria-labelledby="exploreTonight">
+          <h2 class="sect">Observing conditions</h2>
+          <div id="tonightBody" class="cards"><p class="empty">Loading astronomical calculations…</p></div>
+          <p class="meta">Event times are UTC. “No event” can occur at high latitudes. Meteor ZHR is an ideal reference rate, not a local forecast.</p>
+        </section>
+        <section id="solarView" role="tabpanel" aria-labelledby="exploreSolar" hidden><h2 class="sect">Solar system at this moment</h2><section id="orbitView" aria-label="Solar system view"></section></section>
       </section>
 
-      <section class="panel" id="panelTraffic" role="tabpanel" aria-labelledby="tabTraffic" data-panel="traffic" hidden>
-        <h2>Optional live data</h2>
+      <section class="panel" id="panelTools" role="tabpanel" aria-labelledby="tabTools" data-panel="tools" hidden>
+        <h2>Charts, calendars &amp; tools</h2>
+        <p class="help">Continue in the Astrologer's Workbench. These links open related calculators; your saved sky inputs are not sent with them.</p>
+        <nav class="tool-links" aria-label="Workbench calculators">
+          <a href="https://occult-kranti.github.io/astrology-sim-ant/pages/book3/nativity.html"><span>Natal chart</span><small>Birth chart inputs, planetary positions and houses</small></a>
+          <a href="https://occult-kranti.github.io/astrology-sim-ant/pages/transits.html"><span>Transit comparison</span><small>Compare a selected moment with a natal chart</small></a>
+          <a href="https://occult-kranti.github.io/astrology-sim-ant/pages/synastry.html"><span>Compare two charts</span><small>Synastry with explicit chart inputs</small></a>
+          <a href="https://occult-kranti.github.io/astrology-sim-ant/pages/calendars.html"><span>Calendars &amp; direction</span><small>Named calendar methods, date conversion and Qibla</small></a>
+          <a href="https://occult-kranti.github.io/astrology-sim-ant/pages/workbench.html"><span>Full Workbench</span><small>Traditional astrology tools and their methods</small></a>
+        </nav>
+        <p class="meta">Astrological interpretation is a traditional system, separate from the measured astronomical positions in SkyLens.</p>
+        <details id="trafficDetails"><summary>Optional satellites &amp; aircraft</summary>
         <p class="help">Celestial calculations work without these feeds. Live data can be delayed or unavailable.</p>
         <div class="setrow"><label for="setSats">Show satellites</label><input type="checkbox" id="setSats" aria-describedby="satHelp"></div>
         <p id="satHelp" class="help">Uses CelesTrak orbital elements or a dated bundled snapshot. A calculated position does not imply a satellite is illuminated or visible.</p>
@@ -90,17 +106,25 @@
         <p id="aircraftPrivacy" class="help">Enabling sends your selected latitude and longitude, rounded to 3 decimal places, to AvioADSB about every 12 seconds while this page is visible and the feed is enabled, including when you open another panel. Requests pause during simulated time and require a location you selected. No camera frames are sent. Community data is not for navigation.</p>
         <p class="meta" id="planeMeta">Aircraft feed is off.</p><ul id="planeList"></ul>
         <div class="feeds" aria-label="Feed status"><span class="f"><span class="dot st-off" id="dotTle" aria-hidden="true"></span><span id="tleStatus">TLE: off</span></span><span class="f"><span class="dot st-off" id="dotAdsb" aria-hidden="true"></span><span id="adsbStatus">Aircraft: off</span></span></div>
+        </details>
       </section>
 
       <section class="panel" id="panelSaved" role="tabpanel" aria-labelledby="tabSaved" data-panel="saved" hidden>
         <h2>Saved objects</h2><ul id="savedList"><li class="empty">Select an object, then choose Save object.</li></ul>
+        <h2 class="sect">Saved locations</h2><ul id="savedLocationList"><li class="empty">Save a named location in Settings to return to its sky.</li></ul>
+        <button id="openLocationSettings" class="subtle" type="button">Save your current location</button>
         <h2 class="sect">Observation notes</h2><form id="notesForm"><label for="observationNote">A note for your next session</label><textarea id="observationNote" rows="3" maxlength="4000" placeholder="Object, sky conditions, what you saw…"></textarea><div class="inputrow"><button type="submit">Save note</button><button type="button" id="clearNote">Clear note</button></div><p id="noteStatus" class="meta" role="status">Stored only in this browser.</p></form>
       </section>
 
       <section class="panel" id="panelSettings" role="tabpanel" aria-labelledby="tabSettings" data-panel="settings" hidden>
-        <h2>Your sky</h2><p id="locationStatus" class="help">Demo location: New York. Set a location to see your own sky.</p>
+        <h2>Your sky</h2>
+        <label for="nameMode">Object names · <span lang="hi">खगोलीय नाम</span></label>
+        <select id="nameMode" aria-describedby="nameModeHelp"><option value="bilingual">हिन्दी + English</option><option value="hi">हिन्दी</option><option value="en">English</option></select>
+        <p id="nameModeHelp" class="help">Reviewed Hindi names are shown where available. Other catalog names stay in English. Transliterations and traditional aliases are identified in object details; the rest of the interface is in English. <a href="docs/hindi-names.md">Hindi naming sources and scope</a>.</p>
+        <h3 class="sect">Location</h3><p id="locationStatus" class="help">Demo location: New York. Set a location to see your own sky.</p>
         <form id="locationForm"><div class="locationFields"><div><label for="locLat">Latitude (° north)</label><input id="locLat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></div><div><label for="locLon">Longitude (° east)</label><input id="locLon" type="number" min="-180" max="180" step="any" inputmode="decimal" required></div></div><div class="inputrow"><button id="setLoc" type="submit">Set location</button><button id="locGps" type="button">Use my location</button></div></form>
         <p class="help">Location is used for calculations on this device. It is sent externally only if you enable the aircraft feed.</p>
+        <form id="saveLocationForm"><label for="savedLocationName">Name this location</label><div class="inputrow"><input id="savedLocationName" type="text" maxlength="40" required placeholder="Home, observatory, mountain…" autocomplete="off" aria-describedby="savedLocationStatus"><button id="saveLocation" type="submit">Save this location</button></div><p id="savedLocationStatus" class="meta" role="status">Uses the selected coordinates above. Stored only in this browser.</p></form>
         <details id="alignmentDetails"><summary>Alignment &amp; camera calibration</summary>
           <p class="help">Sensor alignment is approximate. Match a known distant landmark or celestial object. Field of view is the estimated lens diagonal angle before the preview is cropped to fill the viewport. The projection accounts for that crop; camera zoom and rotation may require adjustment.</p>
           <div class="setrow"><label for="setFov">Diagonal field of view</label><input type="range" id="setFov" min="30" max="120" step="1"><output id="fovVal" for="setFov"></output></div>
