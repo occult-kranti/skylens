@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-05T22:21:23.967Z",
+  "origin": "https://occult-kranti.github.io",
+  "conditions": "One real browser GET per provider, fixed public London point,25NM. No retries. Synthetic page at real Pages security origin; not release proof.",
+  "feeds": [
+    {
+      "id": "adsbfi",
+      "url": "https://opendata.adsb.fi/api/v3/lat/51.507/lon/-0.128/dist/25",
+      "browserReadable": false,
+      "error": "Failed to fetch",
+      "elapsedMs": 401.19999999552965
+    },
+    {
+      "id": "adsblol",
+      "url": "https://api.adsb.lol/v2/point/51.507/-0.128/25",
+      "browserReadable": false,
+      "error": "Failed to fetch",
+      "elapsedMs": 667.6999999955297
+    },
+    {
+      "id": "airplaneslive",
+      "url": "https://api.airplanes.live/v2/point/51.507/-0.128/25",
+      "browserReadable": false,
+      "error": "Failed to fetch",
+      "elapsedMs": 152.39999999850988
+    }
+  ]
+}

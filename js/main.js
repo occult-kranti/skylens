@@ -4,7 +4,7 @@ import { loadStars, visibleStars, computeBodies, engineReady } from './sky.js';
 import { loadConstellations, loadDSOs, constellationFrame, dsoFrame } from './objects.js';
 import { sunEvents, moonEvents, planetEvents, activeShowers } from './events.js';
 import { initSatellites, propagateNow, satMeta } from './satellites.js';
-import { startPlanes } from './planes.js';
+import { startPlanes, refreshAircraftPositions, AIRCRAFT_PROVIDERS, DEFAULT_AIRCRAFT_PROVIDER } from './planes.js';
 import * as S from './sensors.js';
 import { createTrackingController } from './tracking.js';
 import { createRenderer, PALETTES } from './render.js';
@@ -12,6 +12,7 @@ import { createUI } from './ui.js';
 import { displayName, searchNames, NAME_MODES } from './names.js';
 import { calculateObjectEvents } from './observing.js';
 import { buildSkyHandoff, parseSkyHandoff } from './handoff.js';
+import { interpolateDirection, aimingCandidates, selectMovingMarkers } from './nearby.js';
 
 const PREFS_KEY = 'skylens.preferences.v2';
 const DEMO_LOC = { lat: 40.7128, lon: -74.006, source: 'demo (New York)' };
@@ -19,6 +20,14 @@ const DEFAULT_LAYERS = { grid: true, labels: true, stars: true, bodies: true, co
 const SAVABLE_ID = /^(star|body|dso|const|sat):/;
 export function validLocation(loc) {
   return !!loc && Number.isFinite(loc.lat) && Math.abs(loc.lat) <= 90 && Number.isFinite(loc.lon) && Math.abs(loc.lon) <= 180;
+}
+const validHeight = height => Number.isFinite(height) && height >= -500 && height <= 10000;
+function observerLocation(loc) {
+  const result = validLocation(loc) ? { ...loc } : { ...DEMO_LOC };
+  result.source = typeof result.source === 'string' ? result.source : 'manual';
+  if (!validHeight(result.heightM)) delete result.heightM;
+  if (!(Number.isFinite(result.heightAccuracyM) && result.heightAccuracyM >= 0)) delete result.heightAccuracyM;
+  return result;
 }
 export function normalizeSavedLocations(value) {
   if (!Array.isArray(value)) return [];
@@ -28,7 +37,8 @@ export function normalizeSavedLocations(value) {
     const name = typeof item.name === 'string' ? item.name.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 40) : '';
     if (!name) return [];
     seen.add(item.id);
-    return [{ id: item.id, name, lat: item.lat, lon: item.lon }];
+    return [{ id: item.id, name, lat: item.lat, lon: item.lon,
+      ...(validHeight(item.heightM) ? { heightM: item.heightM } : {}) }];
   }).slice(0, 12);
 }
 export function addSavedLocation(locations, name, loc, id) {
@@ -38,7 +48,7 @@ export function addSavedLocation(locations, name, loc, id) {
   if (!validLocation(loc)) return { ok: false, message: 'Choose valid coordinates before saving.' };
   if (list.some(item => item.name.toLocaleLowerCase() === clean.toLocaleLowerCase())) return { ok: false, message: 'That name is already saved. Choose a different name.' };
   if (list.length >= 12) return { ok: false, message: 'Twelve locations are saved. Remove one before adding another.' };
-  const next = normalizeSavedLocations([...list, { id, name: clean, lat: loc.lat, lon: loc.lon }]);
+  const next = normalizeSavedLocations([...list, { id, name: clean, lat: loc.lat, lon: loc.lon, heightM: loc.heightM }]);
   if (next.length !== list.length + 1) return { ok: false, message: 'The location could not be saved. Try again.' };
   return { ok: true, locations: next, message: `${clean} saved on this device.` };
 }
@@ -60,7 +70,10 @@ export function normalizePreferences(raw = {}) {
   for (const key of Object.keys(layers)) if (typeof raw.layers?.[key] === 'boolean') layers[key] = raw.layers[key];
   let selectedTime = null;
   try { selectedTime = parseSimulationTime(raw.selectedTime); } catch { /* corrupt saved time -> live */ }
-  return { loc: validLocation(raw.loc) ? { ...raw.loc } : { ...DEMO_LOC },
+  return { loc: observerLocation(raw.loc),
+    aircraftProvider: Object.hasOwn(AIRCRAFT_PROVIDERS, raw.aircraftProvider) ? raw.aircraftProvider : DEFAULT_AIRCRAFT_PROVIDER,
+    aircraftRangeNm: [25, 50, 100].includes(raw.aircraftRangeNm) ? raw.aircraftRangeNm : 50,
+    satelliteVisibility: raw.satelliteVisibility === 'all' ? 'all' : 'night',
     nameMode: NAME_MODES.includes(raw.nameMode) ? raw.nameMode : 'bilingual',
     savedLocations: normalizeSavedLocations(raw.savedLocations),
     fov: finite(raw.fov, 70, 30, 120), magLimit: finite(raw.magLimit, 4.6, 2, 4.6),
@@ -131,6 +144,7 @@ export function createApplication() {
   catch (error) { handoffError = error.message; }
   // A previous session never silently resumes external aircraft location sharing.
   prefs.layers.planes = false;
+  prefs.layers.sats = false; // fresh visits never start an optional network feed
   if (qp.has('lat') && qp.has('lon')) {
     const urlLoc = { lat: Number(qp.get('lat')), lon: Number(qp.get('lon')), source: 'URL' };
     if (qp.get('lat')?.trim() && qp.get('lon')?.trim() && validLocation(urlLoc)) prefs.loc = urlLoc;
@@ -144,17 +158,23 @@ export function createApplication() {
     prefs.layers.sats = false; // a URL never opts this visit into external feeds
   }
   const state = { ...prefs, mode: 'manual', az: 200, alt: 30, sensor: null,
-    bodies: [], sats: [], satelliteCatalogue: [], planes: [], planeStatus: 'off', planeAge: null, planeInfo: null, tleMeta: null,
+    bodies: [], sats: [], satelliteCatalogue: [], planes: [], aircraftReports: [], aimingCandidates: [], planeStatus: 'off', planeAge: null, planeInfo: null, tleMeta: null,
     highlight: null, selectedId: null, cameraStatus: 'off', trackingStatus: 'off', trackingRequested: false, savedObjects: [] };
   const canvas = $('sky'), video = $('cam'), renderer = createRenderer(canvas);
   let cameraSession = null, cameraToken = 0, cameraStarting = false, disposed = false;
-  let animation = null, clockTimer = null, aircraft = null, satelliteController = null, satelliteReady = false;
+  let animation = null, clockTimer = null, aircraft = null, aircraftGeneration = 0, satelliteController = null, satelliteReady = false;
   let engine = null, snapshot = { stars: [], renderStars: [], visibleCount: 0, constellations: [], dsos: [], renderDSOs: [], bodies: [], catalogue: [] };
   let smoothed = null, previousFrame = null, lastTelemetry = 0, lastMessage = '', lastTrackingMessage = '', lastEventsKey = '', query = '';
   let catalogueSettled = false, engineSettled = false, pendingHandoffObject = incomingHandoff?.object || null;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const ui = createUI({ relocate, locate, toggleTracking, startTracking, startCamera: enableCamera, stopCamera: () => stopCamera('off'),
     setTime, search, toggleFavourite, saveLocation, useLocation, removeLocation, objectEvents, refreshSatellites,
+    toggleSatellites: () => applySettings({ layers: { ...state.layers, sats: !state.layers.sats } }),
+    setAircraftEnabled: enabled => applySettings({ layers: { ...state.layers, planes: enabled === true } }),
+    selectNearby: id => {
+      const item = [...state.satelliteCatalogue, ...state.aircraftReports].find(row => row.id === id);
+      if (item) ui.showInfo(item.id.startsWith('plane:') ? { ...item, kind: 'plane', name: item.flight } : item);
+    },
     captureObservation: item => captureSkyObservation(state, item),
     castObservation: record => {
       try { location.assign(buildSkyHandoff(record || captureSkyObservation(state), 'studio')); }
@@ -201,7 +221,7 @@ export function createApplication() {
   function useLocation(id) {
     const loc = state.savedLocations.find(item => item.id === id);
     if (!loc) return { ok: false, message: 'That saved location is unavailable.' };
-    applySettings({ loc: { lat: loc.lat, lon: loc.lon, name: loc.name, source: 'saved' } });
+    applySettings({ loc: { lat: loc.lat, lon: loc.lon, heightM: loc.heightM, name: loc.name, source: 'saved' } });
     ui.toast(`Using ${loc.name}.`);
     return { ok: true, message: `Using ${loc.name}.` };
   }
@@ -246,6 +266,14 @@ export function createApplication() {
   function locate(target) {
     pendingHandoffObject = null; // a deliberate new target supersedes late import selection
     if (!target) { state.highlight = null; state.selectedId = null; return; }
+    if (target.kind === 'plane' || target.id?.startsWith('plane:')) {
+      const fresh = state.planes.find(row => row.id === target.id);
+      if (!fresh || fresh.overlayEligible === false || Date.now() - fresh.positionAt > 20000) {
+        state.highlight = null; state.selectedId = null;
+        ui.toast('That aircraft position is too old for sky guidance. Wait for a fresh report.'); return;
+      }
+      target = fresh;
+    }
     if (!target || !Number.isFinite(target.alt) || !Number.isFinite(target.az)) return;
     const known = allObjects().find(o => o.id === target.id || o.name === (target.label || target.name));
     state.selectedId = known?.id || null;
@@ -280,6 +308,9 @@ export function createApplication() {
     if (patch.loc && !validLocation(patch.loc)) { ui.toast('Enter valid latitude and longitude.'); return; }
     if (patch.loc) clearIncomingHandoff();
     if ('selectedTime' in patch) { setTime(patch.selectedTime); delete patch.selectedTime; }
+    const providerChanged = 'aircraftProvider' in patch && patch.aircraftProvider !== state.aircraftProvider;
+    if (providerChanged) patch.layers = { ...(patch.layers || state.layers), planes: false };
+    if (patch.loc || providerChanged || 'aircraftRangeNm' in patch) stopAircraft();
     const next = normalizePreferences({ ...state, ...patch });
     Object.assign(state, next);
     document.body.classList.toggle('night', state.night);
@@ -287,8 +318,7 @@ export function createApplication() {
     if (patch.loc || 'magLimit' in patch || 'refraction' in patch) refreshSky(true);
     ui.syncSettings?.(state);
     if ('nameMode' in patch) { lastEventsKey = ''; refreshSky(); }
-    if (patch.loc && aircraft) { aircraft.stop(); aircraft = null; state.planes = []; }
-    syncFeeds();
+    syncFeeds(); refreshSky();
   }
   async function relocate() {
     ui.toast('Requesting your location…');
@@ -366,21 +396,30 @@ export function createApplication() {
     })().catch(e => { if (token === cameraToken) stopCamera('error', `Camera could not start: ${e.message || 'unknown error'}`); });
   }
 
-  function syncFeeds() {
+  function stopAircraft() {
+    aircraftGeneration++;
+    aircraft?.stop(); aircraft = null;
+    state.planes = []; state.aircraftReports = []; state.planeStatus = 'off'; state.planeInfo = null;
+  }
+  function syncFeeds(refreshOrbitalData = false) {
     const active = !document.hidden;
     const shareAircraft = active && state.layers.planes && !state.selectedTime && !state.loc.source?.startsWith('demo');
-    if (!shareAircraft && aircraft) { aircraft.stop(); aircraft = null; state.planes = []; state.planeStatus = 'off'; }
+    if (!shareAircraft && (aircraft || state.aircraftReports.length)) stopAircraft();
     if (shareAircraft && !aircraft) {
+      const generation = ++aircraftGeneration;
+      state.planeStatus = 'loading';
       aircraft = startPlanes(() => state.loc, update => {
-        state.planeStatus = update.status; state.planeAge = update.ageMs; state.planeInfo = update; state.planes = update.planes || [];
-        ui.statusDot('adsb', update.status === 'ok' ? 'ok' : 'warn', `Aircraft: ${update.status}`);
-      });
+        if (generation !== aircraftGeneration || !state.layers.planes || document.hidden || state.selectedTime) return;
+        state.planeStatus = update.status; state.planeAge = update.ageMs; state.planeInfo = update;
+        state.aircraftReports = update.planes || [];
+        refreshSky();
+      }, { provider: state.aircraftProvider, rangeNm: state.aircraftRangeNm });
     }
     if (state.layers.planes && !shareAircraft) {
       state.planeStatus = state.selectedTime ? 'simulated' : state.loc.source?.startsWith('demo') ? 'location-needed' : 'off';
     }
     if ((!active || !state.layers.sats) && satelliteController) { satelliteController.abort(); satelliteController = null; }
-    if (active && state.layers.sats && !satelliteReady && !satelliteController) {
+    if (active && state.layers.sats && (refreshOrbitalData || !satelliteReady) && !satelliteController) {
       const controller = satelliteController = new AbortController();
       // Remote data never blocks controls, stars, camera or the animation loop.
       initSatellites({ signal: controller.signal }).then(meta => {
@@ -412,22 +451,37 @@ export function createApplication() {
     const date = dateNow();
     // Expire moving reports between polls as well as at receipt (1 Hz UI cadence).
     const receivedNow = Date.now();
-    state.planes = state.planes.filter(p => Number.isFinite(p.positionAt) && receivedNow - p.positionAt <= 60000);
+    const orbital = satMeta();
+    // Successful orbital feeds may refresh once the source interval elapses.
+    // A failed/partial attempt needs an explicit human check, not automatic
+    // retries against a provider that asked this client to stop.
+    if (state.layers.sats && satelliteReady && !satelliteController && !orbital?.error && !orbital?.partial &&
+        ['celestrak', 'cache'].includes(orbital?.source) && Number.isFinite(orbital.nextRefreshAt) && receivedNow >= orbital.nextRefreshAt) syncFeeds(true);
+    state.aircraftReports = refreshAircraftPositions(state.aircraftReports, state.loc, receivedNow);
+    const nextPlanes = new Map(refreshAircraftPositions(state.aircraftReports, state.loc, receivedNow + 1000).map(p => [p.id, p]));
+    state.planes = state.aircraftReports.filter(p => p.overlayEligible && p.alt >= 0).map(p => {
+      const next = nextPlanes.get(p.id);
+      return { ...p, kind: 'plane', name: p.flight, sampleTimeISO: new Date(receivedNow).toISOString(),
+        ...(next ? { next: { dateISO: new Date(receivedNow + 1000).toISOString(), alt: next.alt, az: next.az, rangeKm: next.slantKm } } : {}) };
+    });
     snapshot = cache.get(date, state.loc, state, force); state.bodies = snapshot.bodies;
     if (state.layers.sats && satelliteReady) {
       try {
-        state.satelliteCatalogue = propagateNow(date, state.loc.lat, state.loc.lon, -90);
-        state.sats = state.satelliteCatalogue.filter(item => item.alt >= 0); state.tleMeta = satMeta();
+        state.satelliteCatalogue = propagateNow(date, state.loc.lat, state.loc.lon, -90, { observerHeightM: state.loc.heightM || 0 });
+        state.sats = state.satelliteCatalogue.filter(item => item.alt >= 0 && (state.satelliteVisibility === 'all' || item.visibility?.candidate)); state.tleMeta = satMeta();
       } catch { state.sats = []; state.satelliteCatalogue = []; }
     } else { state.sats = []; state.satelliteCatalogue = []; }
     if (state.selectedId) {
       const selected = allObjects().find(o => o.id === state.selectedId);
       state.highlight = selected ? { ...selected, label: selected.name } : null;
+      if (!selected && /^(plane|sat):/.test(state.selectedId)) state.selectedId = null;
     }
     const sun = snapshot.bodies.find(b => b.kind === 'sun');
     document.body.dataset.sun = (sun?.alt ?? -30) > 0 ? 'day' : (sun?.alt ?? -30) > -6 ? 'dusk' : 'night';
     ui.skyList(snapshot.bodies.filter(b => b.alt > -6), snapshot.stars.filter(s => s.name && s.alt > 0).slice(0, 8));
-    ui.satList(state.sats, state.tleMeta); ui.planeList(state.planes, state.planeStatus, state.planeAge, state.planeInfo);
+    ui.satList(state.sats, state.tleMeta); ui.planeList(state.aircraftReports, state.planeStatus, state.planeAge, state.planeInfo);
+    ui.nearbyState?.(state);
+    ui.statusDot('adsb', !state.layers.planes ? 'off' : state.planeStatus === 'ok' ? 'ok' : 'warn', `Aircraft: ${state.layers.planes ? state.planeStatus : 'off'}`);
     ui.searchResults?.(search(query)); updateSaved();
     const eventKey = [state.selectedTime || Math.floor(date.getTime() / 60000), state.loc.lat, state.loc.lon, state.nameMode].join('|');
     if (engine && eventKey !== lastEventsKey) {
@@ -461,17 +515,24 @@ export function createApplication() {
     } else basis = X.makeBasis(az, alt);
     const w = renderer.width, h = renderer.height;
     const fov = X.cameraFov(state.fov, w, h, cameraSession ? video.videoWidth : w, cameraSession ? video.videoHeight : h);
+    const instant = dateNow().getTime();
+    const movingSatellites = state.sats.map(o => interpolateDirection(o, instant));
+    const movingPlanes = state.planes.filter(o => Date.now() - o.positionAt <= 20000).map(o => interpolateDirection(o, instant));
+    const movingHighlight = [...movingSatellites, ...movingPlanes].find(o => o.id === state.selectedId);
+    const highlight = state.highlight?.kind === 'plane' && !movingHighlight ? null : movingHighlight || state.highlight;
     renderer.draw({ basis, ...fov, stars: snapshot.renderStars,
-      bodies: state.bodies, sats: state.sats, planes: state.planes,
+      bodies: state.bodies, sats: selectMovingMarkers(movingSatellites, alt, az, state.selectedId), planes: selectMovingMarkers(movingPlanes, alt, az, state.selectedId),
       constellations: state.layers.constellations ? snapshot.constellations : null,
       dsos: state.layers.dsos ? snapshot.renderDSOs : null,
-      highlight: state.highlight, layers: state.layers, palette: state.night ? PALETTES.night : PALETTES.normal,
+      highlight, layers: state.layers, palette: state.night ? PALETTES.night : PALETTES.normal,
       centerAz: az, centerAlt: alt, cameraActive: !!cameraSession, horizonOnly: !!cameraSession, reducedMotion: reducedMotion.matches, nameMode: state.nameMode });
     if (timestamp - lastTelemetry > 250) {
       lastTelemetry = timestamp;
       ui.telemetry({ loc: state.loc, az, alt, date: dateNow(), isLive: !state.selectedTime,
         counts: `${snapshot.visibleCount} stars · ${state.sats.length} satellites` });
       ui.compassTape(az);
+      state.aimingCandidates = aimingCandidates([...movingSatellites, ...movingPlanes], alt, az);
+      ui.nearbyAim?.(state.aimingCandidates);
     }
   }
   function resumeClock() {
@@ -486,7 +547,7 @@ export function createApplication() {
     if (cameraSession || cameraStarting) stopCamera('paused');
     clearInterval(clockTimer); clockTimer = null;
     cancelAnimationFrame(animation); animation = null; previousFrame = null;
-    aircraft?.stop(); aircraft = null; state.planes = [];
+    stopAircraft();
     satelliteController?.abort(); satelliteController = null;
   }
   const gestureController = new AbortController(), listen = (element, name, fn) => element.addEventListener(name, fn, { signal: gestureController.signal });

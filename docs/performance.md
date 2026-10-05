@@ -76,3 +76,21 @@ Baseline local `7c1a54a` corresponds to published remote `9480f5df`. Same Python
 | Application JS | 147,695 / 50,599 | 164,731 / 55,515 |
 
 The independent motion controller adds one module (14 application modules total). No runtime dependency or font request was added. Catalogue/planet computation remains at 1 Hz and projection remains frame-driven; reduced-motion and visibility suspension remain in place. A deterministic timer test verifies that continuous motion reuses one watchdog deadline instead of creating one timer per sample. Scientific marker changes retain the existing 45-label budget and DPR cap of 2. No phone FPS, optical latency, energy or first-paint improvement is claimed.
+
+## Nearby tracking cost — October 5, 2026
+
+Baseline published`dcaebfbf`/local`e139142`. Same Linux environment and Python gzip.compress(mtime=0), summed independently per file; raw/compressed **source cost**, not initial network waterfall or first paint:
+
+| Group | Before raw / gzip bytes | Candidate raw / gzip bytes |
+|---|---:|---:|
+| HTML + CSS |42,508 /12,257 |47,814 /13,422 |
+| Application JS |177,783 /59,955 (15files) |226,517 /75,240 (17files) |
+| Vendor JS |501,346 /135,614 (18files) |476,230 /126,002 (23files) |
+
+The satellite.js7.1.0 pure-JS graph is smaller than the previous4.1.4 vendor source; type stripping/formatting contribute. New nearby geometry, consent/details and source handling increase application code. No framework, remote font, image-recognition model or optional WASM was added.
+
+CPU, Node24.19.0/Linux x64/Xeon8573C: the same1,000-target projection/layout fixture (390×844,336 candidates,45labels,100warmups then9×200iterations) measured median0.06987ms before and0.07151ms after. The functions measured are unchanged; treat this as run-to-run variation, not an optimization or regression claim. Reproduce with`node tests/nearby-benchmark.mjs`; paired raw records live in evidence/nearby/. Excludes rasterization, DOM, moving-marker selection, ephemeris, network and sensors.
+
+The173-record all-horizon satellite batch increased from median0.259ms/p950.504ms to0.953ms/p952.006ms (200warmups,1,000iterations, sameNode environment), adding shadow/geodetic calculations and a second SGP4 sample. This is a measured cost increase, performed at1Hz; frame projection interpolates short unit-vector samples. [Satellite methods](satellite-nearby-methods.md) record exact scope. Moving markers are capped at80 per layer and labels retain the45-label collision budget. Aircraft polling is12s forAvio or5s for the optionalfi provider and suspends when hidden.
+
+No mobileFPS, battery, camera latency or physical-device improvement is claimed. Browser fixtures verify controls and cleanup; phone performance and optical alignment remain README human checks.

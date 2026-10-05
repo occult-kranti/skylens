@@ -1,0 +1,158 @@
+{
+  "name": "satellite.js",
+  "version": "7.1.0",
+  "commit": "582a72ecf9cb22fd3c210f1e497d8565517f1d6d",
+  "license": "MIT",
+  "retrieved": "2026-10-05",
+  "compiler": "Node.js v24.19.0 node:module.stripTypeScriptTypes, mode=transform; no calculation edits",
+  "files": [
+    {
+      "source": "src/common-types.ts",
+      "sourceBlob": "5b4cc6b13943bbe1ff19e37b09c0e67190ef2deb",
+      "output": "common-types.js",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "src/constants.ts",
+      "sourceBlob": "a3d92f64cc44a3578713cfa352ce1c809e998968",
+      "output": "constants.js",
+      "bytes": 595,
+      "sha256": "46267cfaba3543b6ab0e842359708e95eec3b83b63232897a1d8fd6931f1e763"
+    },
+    {
+      "source": "src/dopplerFactor.ts",
+      "sourceBlob": "788b11c859908e9dadfd18f6d1614e49ab20b827",
+      "output": "dopplerFactor.js",
+      "bytes": 686,
+      "sha256": "5e270319591f9b8ae6c53d60ccc3b9f249125d48b36de89a31bb31c07341f3cc"
+    },
+    {
+      "source": "src/ext.ts",
+      "sourceBlob": "e91e0f49db4be504f81d4cdc70a6c076029837e9",
+      "output": "ext.js",
+      "bytes": 2214,
+      "sha256": "ab2b31706fbdd96549be2ff135cd379533b3a245be5cc948fe0abede617dd6dc"
+    },
+    {
+      "source": "src/index.ts",
+      "sourceBlob": "ede6778262af834854ae814e4a9c0c2bf6ef99c1",
+      "output": "index.js",
+      "modification": "omit optional WASM export",
+      "bytes": 661,
+      "sha256": "e244222ae8d687a7dae2276f86d1e90f71af99ed89a5ef016a9d3815eb7ae45b"
+    },
+    {
+      "source": "src/io.ts",
+      "sourceBlob": "44cd3fbe9624cc8ed55f4cf84a56436442cd970c",
+      "output": "io.js",
+      "bytes": 3523,
+      "sha256": "03df43ee72a019ed392d3efe4460b79742bd69ebafbea818ea6c8803359bbc33"
+    },
+    {
+      "source": "src/propagation.ts",
+      "sourceBlob": "23222ffe424bf7365fc96140ac09d09fbd7f675d",
+      "output": "propagation.js",
+      "bytes": 152,
+      "sha256": "98bffd4671df7ba2550f65c2cd4c2a3e100ed59cf6861044352462b9ec98ba06"
+    },
+    {
+      "source": "src/propagation/SatRec.ts",
+      "sourceBlob": "7b3221ec0bae162cdc8524216a9bf46cbce67222",
+      "output": "propagation/SatRec.js",
+      "bytes": 574,
+      "sha256": "c20580a631f0dc924f25ac8eb7fda0a7882a48f923e773c30f5144f06dc5c6b7"
+    },
+    {
+      "source": "src/propagation/check-for-decay.ts",
+      "sourceBlob": "d84e9b8397b609edd08d37ca3a6bd85931a03223",
+      "output": "propagation/check-for-decay.js",
+      "bytes": 58,
+      "sha256": "8b359126f61b93af305ca2176a1b481c3b703df955b84c99ca036c25d7156abf"
+    },
+    {
+      "source": "src/propagation/dpper.ts",
+      "sourceBlob": "4ab59cf60dfdd119e2d2bcd85d08ba19e8565845",
+      "output": "propagation/dpper.js",
+      "bytes": 3240,
+      "sha256": "ca8f148d7caf0d7e28c3ed0417088f4653c3519d3ef3190530844b3d51216ea6"
+    },
+    {
+      "source": "src/propagation/dscom.ts",
+      "sourceBlob": "58b0b11ce4f3e24b91b49d13ac167cc1f81c117a",
+      "output": "propagation/dscom.js",
+      "bytes": 7359,
+      "sha256": "3ed053ced97457fe3741e9b04ed06e9a77983ae0c144d49db81a39314abe50b5"
+    },
+    {
+      "source": "src/propagation/dsinit.ts",
+      "sourceBlob": "0d38e1847ffbb8c04b00328f78fc1fe432420acb",
+      "output": "propagation/dsinit.js",
+      "bytes": 7727,
+      "sha256": "334fa483cd9d016af871a0c02881541a863685d008f1b5a201b7093d8fc996d0"
+    },
+    {
+      "source": "src/propagation/dspace.ts",
+      "sourceBlob": "c6ddf26fc84e5d71fdd33e0e039c1cec9f6a9233",
+      "output": "propagation/dspace.js",
+      "bytes": 3582,
+      "sha256": "7f28603e2996a404a828a2a326985ca38c6c0655648d508f62508c727094bb36"
+    },
+    {
+      "source": "src/propagation/gstime.ts",
+      "sourceBlob": "7bae333e23eab77c5177575f47f22cc012eb8052",
+      "output": "propagation/gstime.js",
+      "bytes": 732,
+      "sha256": "c9dbcad373083afeb204684ccd2c6654c58659303567fb9bf89066d8a092f106"
+    },
+    {
+      "source": "src/propagation/initl.ts",
+      "sourceBlob": "6cf7366a7d1e14c69a4027d03e981429dd25f251",
+      "output": "propagation/initl.js",
+      "bytes": 1751,
+      "sha256": "0ff9459cca21ec5392bad6f64b73c9f334f5d304d56fc224de536fbc4a185666"
+    },
+    {
+      "source": "src/propagation/propagate.ts",
+      "sourceBlob": "5b5fbc5768a6932269187889e8930fc26e6e550b",
+      "output": "propagation/propagate.js",
+      "bytes": 736,
+      "sha256": "a067eae6a3d94f74e84d82c2896171fcca3d7454f780456520328458267cd7c1"
+    },
+    {
+      "source": "src/propagation/sgp4.ts",
+      "sourceBlob": "94f7c6dee72e78762b820871590f0ad21c3a634f",
+      "output": "propagation/sgp4.js",
+      "bytes": 8138,
+      "sha256": "d3c7b270b2902876ac93b0591bf2b61b2e4e78ace8c64afada1374d209e7ddfe"
+    },
+    {
+      "source": "src/propagation/sgp4init.ts",
+      "sourceBlob": "9b568ac61c716e753ea38edf2399919a1d8b660a",
+      "output": "propagation/sgp4init.js",
+      "bytes": 15210,
+      "sha256": "b688194dd33ac9d988c7ca006c0a81e1197e84a8e51b8a1b89d8ec63f9913815"
+    },
+    {
+      "source": "src/shadow.ts",
+      "sourceBlob": "0992f5fe3c06806f22acfd831da72225e9d642d1",
+      "output": "shadow.js",
+      "bytes": 1806,
+      "sha256": "cf3fb38ad1f23b525ef350ddfb9b827c0dc38becc64eb04dccf2c228f46c4759"
+    },
+    {
+      "source": "src/sun.ts",
+      "sourceBlob": "1e97e47efe28cd3b8a57fa2bbeb21f99cb3f75f3",
+      "output": "sun.js",
+      "bytes": 1305,
+      "sha256": "33590b3ebe480a1ad99073feee00175396069240984b253f8ab09646bbb9b414"
+    },
+    {
+      "source": "src/transforms.ts",
+      "sourceBlob": "9f38d32b4d89fd1494d58bfdfe51e76fd3ba35a4",
+      "output": "transforms.js",
+      "bytes": 4042,
+      "sha256": "ae966bd16d47b0882a87c3c978fdeba685e04aee3f15552c3db3744ef7034f43"
+    }
+  ]
+}

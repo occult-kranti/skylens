@@ -39,6 +39,8 @@ jobs:
         run: sudo apt-get install -y fonts-noto-core
       - name: Browser journeys under the Pages project path
         run: node tests/browser.mjs
+      - name: Nearby tracking and permission journeys
+        run: node tests/browser-nearby.mjs
       - name: Keep browser verification evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -115,6 +117,10 @@ jobs:
               if (response.ok && release.commit === process.env.RELEASE_SHA) {
                 const home = await fetch(base, { signal: AbortSignal.timeout(10000) });
                 if (!home.ok) throw new Error('Published homepage is unavailable.');
+                const html = await home.text();
+                for (const id of ['toggleSatellites', 'togglePlanes', 'planeConsent']) {
+                  if (!html.includes('id="' + id + '"')) throw new Error('Published nearby controls are missing: ' + id);
+                }
                 verified = true;
                 console.log('Verified Pages release ' + release.commit + ' at ' + base.href);
                 break;

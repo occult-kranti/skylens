@@ -1,0 +1,1643 @@
+{
+  "timestamp": "2026-10-05T22:46:20.711Z",
+  "completed": [
+    "small-mobile: camera denial/manual, direct Sky Hindi show/hide with Settings synchronization and reload, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests",
+    "mobile: camera denial/manual, direct Sky Hindi show/hide with Settings synchronization and reload, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests",
+    "landscape: camera denial/manual, direct Sky Hindi show/hide with Settings synchronization and reload, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests",
+    "desktop: camera denial/manual, direct Sky Hindi show/hide with Settings synchronization and reload, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests",
+    "reflow-200-equivalent: camera denial/manual, direct Sky Hindi show/hide with Settings synchronization and reload, named-location save/use/remove, Hindi/English planet and constellation search with stable IDs and coordinates, favourites/name persistence, observing/solar separation, Tools time/location/feed status, responsive controls, Pages base path, no external requests",
+    "orientation replay: gesture grant, camera-free heading updates, independent camera start/stop, manual fallback, stale recovery, background listener/video cleanup, authorized motion-only resume",
+    "camera denial leaves authorized sensor tracking active with continuing heading updates",
+    "orientation denied: explicit status, no unrequested camera, safe fallback or cancelled late grant",
+    "orientation unsupported: explicit status, no unrequested camera, safe fallback or cancelled late grant",
+    "orientation deferred: explicit status, no unrequested camera, safe fallback or cancelled late grant",
+    "explicit orbital refresh: one mocked 503 stops further requests, repeated check honors two-hour window, visible fallback/failure status, no implicit feed enablement or aircraft request; live API availability not tested",
+    "camera mock: start, stop, restart, pagehide track cleanup; physical alignment untested"
+  ],
+  "passed": true,
+  "browserDiagnostics": [],
+  "layoutMeasurements": [
+    {
+      "label": "small-mobile observing at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "panel": {
+        "width": 298,
+        "height": 158,
+        "visibleWidth": 298,
+        "visibleHeight": 158,
+        "left": 11,
+        "right": 309,
+        "top": 399,
+        "bottom": 557,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 156,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 164,
+          "right": 297,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile solar at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "panel": {
+        "width": 298,
+        "height": 158,
+        "visibleWidth": 298,
+        "visibleHeight": 158,
+        "left": 11,
+        "right": 309,
+        "top": 399,
+        "bottom": 557,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 156,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 164,
+          "right": 297,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile constellation detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "panel": {
+        "width": 296,
+        "height": 195,
+        "visibleWidth": 296,
+        "visibleHeight": 195,
+        "left": 12,
+        "right": 308,
+        "top": 156,
+        "bottom": 351,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 156,
+          "top": 370,
+          "bottom": 418,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 164,
+          "right": 297,
+          "top": 370,
+          "bottom": 418,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile planet detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "panel": {
+        "width": 296,
+        "height": 195,
+        "visibleWidth": 296,
+        "visibleHeight": 195,
+        "left": 12,
+        "right": 308,
+        "top": 156,
+        "bottom": 351,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 156,
+          "top": 370,
+          "bottom": 418,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 164,
+          "right": 297,
+          "top": 370,
+          "bottom": 418,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile Tools at selected time",
+      "selector": "#panelTools",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "panel": {
+        "width": 298,
+        "height": 158,
+        "visibleWidth": 298,
+        "visibleHeight": 158,
+        "left": 11,
+        "right": 309,
+        "top": 399,
+        "bottom": 557,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 156,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 164,
+          "right": 297,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile Settings",
+      "selector": "#panelSettings",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "panel": {
+        "width": 298,
+        "height": 157,
+        "visibleWidth": 298,
+        "visibleHeight": 157,
+        "left": 11,
+        "right": 309,
+        "top": 400,
+        "bottom": 557,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 156,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 164,
+          "right": 297,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile Saved",
+      "selector": "#panelSaved",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "panel": {
+        "width": 298,
+        "height": 157,
+        "visibleWidth": 298,
+        "visibleHeight": 157,
+        "left": 11,
+        "right": 309,
+        "top": 400,
+        "bottom": 557,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 156,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 133,
+          "height": 48,
+          "visibleWidth": 133,
+          "visibleHeight": 48,
+          "left": 164,
+          "right": 297,
+          "top": 166,
+          "bottom": 214,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile observing at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "width": 368,
+        "height": 332,
+        "visibleWidth": 368,
+        "visibleHeight": 332,
+        "left": 11,
+        "right": 379,
+        "top": 501,
+        "bottom": 833,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 191,
+          "top": 189,
+          "bottom": 237,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 199,
+          "right": 367,
+          "top": 189,
+          "bottom": 237,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile solar at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "width": 368,
+        "height": 332,
+        "visibleWidth": 368,
+        "visibleHeight": 332,
+        "left": 11,
+        "right": 379,
+        "top": 501,
+        "bottom": 833,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 191,
+          "top": 189,
+          "bottom": 237,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 199,
+          "right": 367,
+          "top": 189,
+          "bottom": 237,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile constellation detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "width": 366,
+        "height": 383,
+        "visibleWidth": 366,
+        "visibleHeight": 383,
+        "left": 12,
+        "right": 378,
+        "top": 161,
+        "bottom": 544,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 191,
+          "top": 567,
+          "bottom": 615,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 199,
+          "right": 367,
+          "top": 567,
+          "bottom": 615,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile planet detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "width": 366,
+        "height": 383,
+        "visibleWidth": 366,
+        "visibleHeight": 383,
+        "left": 12,
+        "right": 378,
+        "top": 161,
+        "bottom": 544,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 191,
+          "top": 567,
+          "bottom": 615,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 199,
+          "right": 367,
+          "top": 567,
+          "bottom": 615,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "rotated planet detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "panel": {
+        "width": 407,
+        "height": 213,
+        "visibleWidth": 407,
+        "visibleHeight": 213,
+        "left": 8,
+        "right": 415,
+        "top": 169,
+        "bottom": 382,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 179.109375,
+          "height": 44,
+          "visibleWidth": 179.109375,
+          "visibleHeight": 44,
+          "left": 458.765625,
+          "right": 637.875,
+          "top": 126,
+          "bottom": 170,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 179.125,
+          "height": 44,
+          "visibleWidth": 179.125,
+          "visibleHeight": 44,
+          "left": 645.875,
+          "right": 825,
+          "top": 126,
+          "bottom": 170,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile Tools at selected time",
+      "selector": "#panelTools",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "width": 368,
+        "height": 332,
+        "visibleWidth": 368,
+        "visibleHeight": 332,
+        "left": 11,
+        "right": 379,
+        "top": 501,
+        "bottom": 833,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 191,
+          "top": 189,
+          "bottom": 237,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 199,
+          "right": 367,
+          "top": 189,
+          "bottom": 237,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile Settings",
+      "selector": "#panelSettings",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "width": 368,
+        "height": 405.109375,
+        "visibleWidth": 368,
+        "visibleHeight": 405,
+        "left": 11,
+        "right": 379,
+        "top": 427.890625,
+        "bottom": 832.890625,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 191,
+          "top": 180.890625,
+          "bottom": 228.890625,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 199,
+          "right": 367,
+          "top": 180.890625,
+          "bottom": 228.890625,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "mobile Saved",
+      "selector": "#panelSaved",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "width": 368,
+        "height": 405.109375,
+        "visibleWidth": 368,
+        "visibleHeight": 405,
+        "left": 11,
+        "right": 379,
+        "top": 427.890625,
+        "bottom": 832.890625,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 23,
+          "right": 191,
+          "top": 180.890625,
+          "bottom": 228.890625,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 168,
+          "height": 48,
+          "visibleWidth": 168,
+          "visibleHeight": 48,
+          "left": 199,
+          "right": 367,
+          "top": 180.890625,
+          "bottom": 228.890625,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape observing at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "panel": {
+        "width": 404,
+        "height": 175,
+        "visibleWidth": 404,
+        "visibleHeight": 175,
+        "left": 431,
+        "right": 835,
+        "top": 206,
+        "bottom": 381,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 207,
+          "top": 175,
+          "bottom": 219,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 215,
+          "right": 403,
+          "top": 175,
+          "bottom": 219,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape solar at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "panel": {
+        "width": 404,
+        "height": 175,
+        "visibleWidth": 404,
+        "visibleHeight": 175,
+        "left": 431,
+        "right": 835,
+        "top": 206,
+        "bottom": 381,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 207,
+          "top": 175,
+          "bottom": 219,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 215,
+          "right": 403,
+          "top": 175,
+          "bottom": 219,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape constellation detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "panel": {
+        "width": 407,
+        "height": 213,
+        "visibleWidth": 407,
+        "visibleHeight": 213,
+        "left": 8,
+        "right": 415,
+        "top": 169,
+        "bottom": 382,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 179.109375,
+          "height": 44,
+          "visibleWidth": 179.109375,
+          "visibleHeight": 44,
+          "left": 458.765625,
+          "right": 637.875,
+          "top": 126,
+          "bottom": 170,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 179.125,
+          "height": 44,
+          "visibleWidth": 179.125,
+          "visibleHeight": 44,
+          "left": 645.875,
+          "right": 825,
+          "top": 126,
+          "bottom": 170,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape planet detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "panel": {
+        "width": 407,
+        "height": 213,
+        "visibleWidth": 407,
+        "visibleHeight": 213,
+        "left": 8,
+        "right": 415,
+        "top": 169,
+        "bottom": 382,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 179.109375,
+          "height": 44,
+          "visibleWidth": 179.109375,
+          "visibleHeight": 44,
+          "left": 458.765625,
+          "right": 637.875,
+          "top": 126,
+          "bottom": 170,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 179.125,
+          "height": 44,
+          "visibleWidth": 179.125,
+          "visibleHeight": 44,
+          "left": 645.875,
+          "right": 825,
+          "top": 126,
+          "bottom": 170,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape Tools at selected time",
+      "selector": "#panelTools",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "panel": {
+        "width": 404,
+        "height": 175,
+        "visibleWidth": 404,
+        "visibleHeight": 175,
+        "left": 431,
+        "right": 835,
+        "top": 206,
+        "bottom": 381,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 207,
+          "top": 175,
+          "bottom": 219,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 215,
+          "right": 403,
+          "top": 175,
+          "bottom": 219,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape Settings",
+      "selector": "#panelSettings",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "panel": {
+        "width": 404,
+        "height": 175,
+        "visibleWidth": 404,
+        "visibleHeight": 175,
+        "left": 431,
+        "right": 835,
+        "top": 206,
+        "bottom": 381,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 207,
+          "top": 240,
+          "bottom": 284,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 215,
+          "right": 403,
+          "top": 240,
+          "bottom": 284,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "landscape Saved",
+      "selector": "#panelSaved",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "panel": {
+        "width": 404,
+        "height": 175,
+        "visibleWidth": 404,
+        "visibleHeight": 175,
+        "left": 431,
+        "right": 835,
+        "top": 206,
+        "bottom": 381,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 207,
+          "top": 240,
+          "bottom": 284,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 188,
+          "height": 44,
+          "visibleWidth": 188,
+          "visibleHeight": 44,
+          "left": 215,
+          "right": 403,
+          "top": 240,
+          "bottom": 284,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop observing at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 1365,
+        "height": 900
+      },
+      "panel": {
+        "width": 418,
+        "height": 386,
+        "visibleWidth": 418,
+        "visibleHeight": 386,
+        "left": 930,
+        "right": 1348,
+        "top": 497,
+        "bottom": 883,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 944,
+          "right": 1135,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 1143,
+          "right": 1334,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop solar at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 1365,
+        "height": 900
+      },
+      "panel": {
+        "width": 418,
+        "height": 386,
+        "visibleWidth": 418,
+        "visibleHeight": 386,
+        "left": 930,
+        "right": 1348,
+        "top": 497,
+        "bottom": 883,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 944,
+          "right": 1135,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 1143,
+          "right": 1334,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop constellation detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 1365,
+        "height": 900
+      },
+      "panel": {
+        "width": 440,
+        "height": 548.609375,
+        "visibleWidth": 440,
+        "visibleHeight": 548.609375,
+        "left": 16,
+        "right": 456,
+        "top": 335.390625,
+        "bottom": 884,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 944,
+          "right": 1135,
+          "top": 615,
+          "bottom": 663,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 1143,
+          "right": 1334,
+          "top": 615,
+          "bottom": 663,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop planet detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 1365,
+        "height": 900
+      },
+      "panel": {
+        "width": 440,
+        "height": 697.71875,
+        "visibleWidth": 440,
+        "visibleHeight": 697.71875,
+        "left": 16,
+        "right": 456,
+        "top": 186.28125,
+        "bottom": 884,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 944,
+          "right": 1135,
+          "top": 615,
+          "bottom": 663,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 1143,
+          "right": 1334,
+          "top": 615,
+          "bottom": 663,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop Tools at selected time",
+      "selector": "#panelTools",
+      "viewport": {
+        "width": 1365,
+        "height": 900
+      },
+      "panel": {
+        "width": 418,
+        "height": 386,
+        "visibleWidth": 418,
+        "visibleHeight": 386,
+        "left": 930,
+        "right": 1348,
+        "top": 497,
+        "bottom": 883,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 944,
+          "right": 1135,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 1143,
+          "right": 1334,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop Settings",
+      "selector": "#panelSettings",
+      "viewport": {
+        "width": 1365,
+        "height": 900
+      },
+      "panel": {
+        "width": 418,
+        "height": 451,
+        "visibleWidth": 418,
+        "visibleHeight": 451,
+        "left": 930,
+        "right": 1348,
+        "top": 432,
+        "bottom": 883,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 944,
+          "right": 1135,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 1143,
+          "right": 1334,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "desktop Saved",
+      "selector": "#panelSaved",
+      "viewport": {
+        "width": 1365,
+        "height": 900
+      },
+      "panel": {
+        "width": 418,
+        "height": 451,
+        "visibleWidth": 418,
+        "visibleHeight": 451,
+        "left": 930,
+        "right": 1348,
+        "top": 432,
+        "bottom": 883,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 944,
+          "right": 1135,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 191,
+          "height": 48,
+          "visibleWidth": 191,
+          "visibleHeight": 48,
+          "left": 1143,
+          "right": 1334,
+          "top": 183,
+          "bottom": 231,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "reflow-200-equivalent observing at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 640,
+        "height": 512
+      },
+      "panel": {
+        "width": 302,
+        "height": 297,
+        "visibleWidth": 302,
+        "visibleHeight": 297,
+        "left": 329,
+        "right": 631,
+        "top": 206,
+        "bottom": 503,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 156,
+          "top": 297,
+          "bottom": 341,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 164,
+          "right": 301,
+          "top": 297,
+          "bottom": 341,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "reflow-200-equivalent solar at selected time",
+      "selector": "#panelExplore",
+      "viewport": {
+        "width": 640,
+        "height": 512
+      },
+      "panel": {
+        "width": 302,
+        "height": 297,
+        "visibleWidth": 302,
+        "visibleHeight": 297,
+        "left": 329,
+        "right": 631,
+        "top": 206,
+        "bottom": 503,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 156,
+          "top": 297,
+          "bottom": 341,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 164,
+          "right": 301,
+          "top": 297,
+          "bottom": 341,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "reflow-200-equivalent constellation detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 640,
+        "height": 512
+      },
+      "panel": {
+        "width": 297,
+        "height": 335,
+        "visibleWidth": 297,
+        "visibleHeight": 335,
+        "left": 8,
+        "right": 305,
+        "top": 169,
+        "bottom": 504,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 132.1875,
+          "height": 44,
+          "visibleWidth": 132.1875,
+          "visibleHeight": 44,
+          "left": 348.609375,
+          "right": 480.796875,
+          "top": 248,
+          "bottom": 292,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 132.203125,
+          "height": 44,
+          "visibleWidth": 132.203125,
+          "visibleHeight": 44,
+          "left": 488.796875,
+          "right": 621,
+          "top": 248,
+          "bottom": 292,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "reflow-200-equivalent planet detail",
+      "selector": "#infocard",
+      "viewport": {
+        "width": 640,
+        "height": 512
+      },
+      "panel": {
+        "width": 297,
+        "height": 335,
+        "visibleWidth": 297,
+        "visibleHeight": 335,
+        "left": 8,
+        "right": 305,
+        "top": 169,
+        "bottom": 504,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 132.1875,
+          "height": 44,
+          "visibleWidth": 132.1875,
+          "visibleHeight": 44,
+          "left": 348.609375,
+          "right": 480.796875,
+          "top": 248,
+          "bottom": 292,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 132.203125,
+          "height": 44,
+          "visibleWidth": 132.203125,
+          "visibleHeight": 44,
+          "left": 488.796875,
+          "right": 621,
+          "top": 248,
+          "bottom": 292,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "reflow-200-equivalent Tools at selected time",
+      "selector": "#panelTools",
+      "viewport": {
+        "width": 640,
+        "height": 512
+      },
+      "panel": {
+        "width": 302,
+        "height": 297,
+        "visibleWidth": 302,
+        "visibleHeight": 297,
+        "left": 329,
+        "right": 631,
+        "top": 206,
+        "bottom": 503,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 156,
+          "top": 297,
+          "bottom": 341,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 164,
+          "right": 301,
+          "top": 297,
+          "bottom": 341,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "reflow-200-equivalent Settings",
+      "selector": "#panelSettings",
+      "viewport": {
+        "width": 640,
+        "height": 512
+      },
+      "panel": {
+        "width": 302,
+        "height": 297,
+        "visibleWidth": 302,
+        "visibleHeight": 297,
+        "left": 329,
+        "right": 631,
+        "top": 206,
+        "bottom": 503,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 156,
+          "top": 362,
+          "bottom": 406,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 164,
+          "right": 301,
+          "top": 362,
+          "bottom": 406,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "label": "reflow-200-equivalent Saved",
+      "selector": "#panelSaved",
+      "viewport": {
+        "width": 640,
+        "height": 512
+      },
+      "panel": {
+        "width": 302,
+        "height": 297,
+        "visibleWidth": 302,
+        "visibleHeight": 297,
+        "left": 329,
+        "right": 631,
+        "top": 206,
+        "bottom": 503,
+        "hit": true
+      },
+      "controls": [
+        {
+          "id": "trackingToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 19,
+          "right": 156,
+          "top": 362,
+          "bottom": 406,
+          "hit": true
+        },
+        {
+          "id": "cameraToggle",
+          "width": 137,
+          "height": 44,
+          "visibleWidth": 137,
+          "visibleHeight": 44,
+          "left": 164,
+          "right": 301,
+          "top": 362,
+          "bottom": 406,
+          "hit": true
+        }
+      ]
+    }
+  ],
+  "failure": null,
+  "physicalDeviceAlignment": "not tested; requires documented phone checklist"
+}

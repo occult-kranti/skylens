@@ -1,0 +1,243 @@
+{
+  "ok": true,
+  "completed": [
+    "small-mobile: successful aircraft consent/cancel, range, geometry labels, guidance/off cleanup, real SGP4 on mocked OMM, reachable switches",
+    "mobile: successful aircraft consent/cancel, range, geometry labels, guidance/off cleanup, real SGP4 on mocked OMM, reachable switches",
+    "landscape: successful aircraft consent/cancel, range, geometry labels, guidance/off cleanup, real SGP4 on mocked OMM, reachable switches",
+    "desktop: successful aircraft consent/cancel, range, geometry labels, guidance/off cleanup, real SGP4 on mocked OMM, reachable switches",
+    "demo privacy, provider re-consent and 403, request cancellation, simulation/background pause, 20-second overlay and 60-second report expiry",
+    "429 retry window, off/on cooldown enforcement, visible quota state"
+  ],
+  "measurements": [
+    {
+      "label": "small-mobile nearby",
+      "width": 320,
+      "scrollWidth": 320,
+      "height": 568,
+      "controls": [
+        {
+          "id": "toggleSatellites",
+          "x": 10,
+          "y": 94,
+          "width": 106,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "id": "togglePlanes",
+          "x": 122,
+          "y": 94,
+          "width": 106,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        }
+      ]
+    },
+    {
+      "label": "small-mobile satellite",
+      "width": 320,
+      "scrollWidth": 320,
+      "height": 568,
+      "controls": [
+        {
+          "id": "toggleSatellites",
+          "x": 10,
+          "y": 94,
+          "width": 106,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "id": "togglePlanes",
+          "x": 122,
+          "y": 94,
+          "width": 106,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        }
+      ]
+    },
+    {
+      "label": "mobile nearby",
+      "width": 390,
+      "scrollWidth": 390,
+      "height": 844,
+      "controls": [
+        {
+          "id": "toggleSatellites",
+          "x": 15,
+          "y": 83,
+          "width": 136,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "id": "togglePlanes",
+          "x": 157,
+          "y": 83,
+          "width": 136,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        }
+      ]
+    },
+    {
+      "label": "mobile satellite",
+      "width": 390,
+      "scrollWidth": 390,
+      "height": 844,
+      "controls": [
+        {
+          "id": "toggleSatellites",
+          "x": 15,
+          "y": 83,
+          "width": 136,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "id": "togglePlanes",
+          "x": 157,
+          "y": 83,
+          "width": 136,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        }
+      ]
+    },
+    {
+      "label": "landscape nearby",
+      "width": 844,
+      "scrollWidth": 844,
+      "height": 390,
+      "controls": [
+        {
+          "id": "toggleSatellites",
+          "x": 8,
+          "y": 95,
+          "width": 159,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "id": "togglePlanes",
+          "x": 173,
+          "y": 95,
+          "width": 159,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        }
+      ]
+    },
+    {
+      "label": "landscape satellite",
+      "width": 844,
+      "scrollWidth": 844,
+      "height": 390,
+      "controls": [
+        {
+          "id": "toggleSatellites",
+          "x": 8,
+          "y": 95,
+          "width": 159,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "id": "togglePlanes",
+          "x": 173,
+          "y": 95,
+          "width": 159,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        }
+      ]
+    },
+    {
+      "label": "desktop nearby",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "height": 1000,
+      "controls": [
+        {
+          "id": "toggleSatellites",
+          "x": 540,
+          "y": 95,
+          "width": 136,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "id": "togglePlanes",
+          "x": 682,
+          "y": 95,
+          "width": 136,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        }
+      ]
+    },
+    {
+      "label": "desktop satellite",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "height": 1000,
+      "controls": [
+        {
+          "id": "toggleSatellites",
+          "x": 540,
+          "y": 95,
+          "width": 136,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        },
+        {
+          "id": "togglePlanes",
+          "x": 682,
+          "y": 95,
+          "width": 136,
+          "height": 44,
+          "hit": true,
+          "inViewport": true
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    "nearby-small-mobile-aircraft.png",
+    "nearby-small-mobile-aircraft-detail.png",
+    "nearby-small-mobile-guided-aircraft.png",
+    "nearby-small-mobile-satellite.png",
+    "nearby-mobile-aircraft.png",
+    "nearby-mobile-aircraft-detail.png",
+    "nearby-mobile-guided-aircraft.png",
+    "nearby-mobile-satellite.png",
+    "nearby-landscape-aircraft.png",
+    "nearby-landscape-aircraft-detail.png",
+    "nearby-landscape-guided-aircraft.png",
+    "nearby-landscape-satellite.png",
+    "nearby-desktop-aircraft.png",
+    "nearby-desktop-aircraft-detail.png",
+    "nearby-desktop-guided-aircraft.png",
+    "nearby-desktop-satellite.png",
+    "nearby-mobile-quota.png"
+  ],
+  "error": null,
+  "fixtureTime": "2000-06-27T18:50:19.733Z",
+  "evidence": "Chromium with mocked optional HTTP feeds. Real SGP4; no live API delivery or physical phone alignment claimed."
+}

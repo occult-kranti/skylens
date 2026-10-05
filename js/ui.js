@@ -1,6 +1,7 @@
 // Accessible DOM controls for the sky. External/catalog strings are always textContent.
 import { compass16, fmtAlt } from './astro.js';
 import { displayName, objectNameRecord } from './names.js';
+import { AIRCRAFT_PROVIDERS } from './planes.js';
 const $ = (id) => document.getElementById(id);
 const node = (tag, text, className) => {
   const el = document.createElement(tag);
@@ -22,6 +23,11 @@ export function createUI(handlers = {}) {
   let locationSignature = '', lastNameMode = 'bilingual', latestTonight = null;
   let detailRequest = 0;
   let sharedContextMessage = '';
+  const consentedProviders = new Set();
+  let consentProvider = null;
+  let nearbyListObjects = new Map();
+  let attributedProvider = null;
+  const shortPortrait = matchMedia('(max-width: 559px) and (max-height: 700px)');
   let toastTimer = null;
   const consolePanel = $('console');
   let chromeObserver = null;
@@ -31,7 +37,10 @@ export function createUI(handlers = {}) {
     root.setProperty('--console-height', `${Math.ceil(consolePanel.getBoundingClientRect().height)}px`);
     root.setProperty('--console-width', `${Math.ceil(consolePanel.getBoundingClientRect().width)}px`);
     root.setProperty('--controls-height', `${Math.ceil($('viewControls').getBoundingClientRect().height)}px`);
-    root.setProperty('--header-height', `${Math.ceil(document.querySelector('.telemetry').getBoundingClientRect().bottom)}px`);
+    const telemetryBottom = Math.ceil(document.querySelector('.telemetry').getBoundingClientRect().bottom);
+    root.setProperty('--telemetry-height', `${telemetryBottom}px`);
+    const shortLandscape = matchMedia('(max-height: 540px) and (min-width: 560px)').matches;
+    root.setProperty('--header-height', `${shortLandscape ? telemetryBottom : Math.ceil($('nearbyControls').getBoundingClientRect().bottom)}px`);
   }
   function scheduleChromeMeasurement() {
     if (chromeFrame !== null) return;
@@ -39,7 +48,7 @@ export function createUI(handlers = {}) {
   }
   if (typeof ResizeObserver === 'function') {
     chromeObserver = new ResizeObserver(scheduleChromeMeasurement);
-    [consolePanel, $('viewControls'), document.querySelector('.telemetry')].forEach(element => chromeObserver.observe(element));
+    [consolePanel, $('viewControls'), document.querySelector('.telemetry'), $('nearbyControls')].forEach(element => chromeObserver.observe(element));
   }
   window.addEventListener('resize', scheduleChromeMeasurement);
   const button = (text, action, className) => {
@@ -54,18 +63,30 @@ export function createUI(handlers = {}) {
     toastBox.replaceChildren(el);
     toastTimer = setTimeout(() => { el.remove(); toastTimer = null; }, ms);
   }
+  function placeToasts() {
+    const panel = dockOpen ? dock.querySelector('.panel.active') : null;
+    const home = panel || $('app');
+    // Notices belong to the current surface. Moving between panels must not
+    // reveal an obsolete location/guidance notice or cover persistent switches.
+    if (toastBox.parentElement !== home) {
+      clearTimeout(toastTimer); toastTimer = null; toastBox.replaceChildren();
+      if (panel) panel.prepend(toastBox); else home.append(toastBox);
+    }
+    toastBox.classList.toggle('in-panel', !!panel);
+  }
   function setDock(open) {
     dockOpen = !!open; dock.classList.toggle('open', dockOpen);
     $('dockContent').hidden = !dockOpen;
     $('dockHandle').setAttribute('aria-expanded', String(dockOpen));
     $('dockLabel').textContent = dockOpen ? 'Close tools' : 'Explore & tools';
     if (dockOpen) { handoffHome.prepend(handoffMessage); card.hidden = true; $('viewStatus').open = false; }
+    placeToasts();
     measureChrome();
   }
   $('dockHandle').addEventListener('click', () => setDock(!dockOpen));
   const tabs = [...dock.querySelectorAll('.tabs > [role="tab"]')];
   function setTab(name) {
-    const destination = name === 'explore' ? 'tonight' : name === 'traffic' ? 'tools' : name;
+    const destination = name === 'explore' ? 'tonight' : name === 'traffic' ? 'sky' : name;
     const tab = tabs.find((b) => b.dataset.tab === destination);
     if (!tab) return;
     tabs.forEach((b) => {
@@ -183,7 +204,7 @@ export function createUI(handlers = {}) {
     if (Number.isFinite(instant.getTime())) {
       $('telTime').textContent = `${isLive ? 'Live' : 'Simulated'} · ${instant.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
       if (!timeDirty && document.activeElement !== $('skyTime')) $('skyTime').value = instant.toISOString().slice(0, 16);
-      $('simulationText').textContent = `Simulated: ${instant.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+      $('simulationText').textContent = shortPortrait.matches ? 'Simulated sky' : `Simulated: ${instant.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
       $('toolsTime').textContent = `${isLive ? 'Live' : 'Simulated'} · ${instant.toISOString().slice(0, 19).replace('T', ' ')} UTC`;
     }
     $('simulationBanner').hidden = isLive;
@@ -191,6 +212,7 @@ export function createUI(handlers = {}) {
     const position = demo ? 'Demo: New York · choose your location' : `${loc.source === 'gps' ? 'Device' : 'Selected'}: ${finite(loc.lat, 3)}°, ${finite(loc.lon, 3)}°${Number.isFinite(loc.accuracy) ? ` ±${Math.round(loc.accuracy)} m` : ''}`;
     $('telPos').textContent = position; $('telPos').classList.toggle('demo', demo);
     $('locationStatus').textContent = demo ? 'Demo location: New York. Set a location to see your own sky.' : `${loc?.name ? `${loc.name} · ` : ''}${position}`;
+    $('observerHeightHelp').textContent = `Optional height above the WGS84 ellipsoid, not height above sea level. ${Number.isFinite(loc?.heightM) ? `Selected height ${finite(loc.heightM)} m${Number.isFinite(loc.heightAccuracyM) ? ` ±${finite(loc.heightAccuracyM)} m reported accuracy` : ' · uncertainty unknown'}.` : 'Height is unknown; tracking estimates 0 m.'} Leave blank if unknown.`;
     $('toolsLocation').textContent = demo ? 'Demo: New York · set your own location' : `${loc?.name ? `${loc.name} · ` : ''}${position}`;
     trackingStatus();
     $('telAim').textContent = Number.isFinite(az) && Number.isFinite(alt) ? `${compass16(az)} ${finite(az)}° · altitude ${fmtAlt(alt)}` : 'Manual sky';
@@ -257,7 +279,8 @@ export function createUI(handlers = {}) {
     try { observation = handlers.captureObservation?.(d); } catch { /* leave capture unavailable for an unsupported record */ }
     const detailDate = new Date(observation?.dateISO || currentState?.selectedTime || Date.now());
     const detailLoc = observation ? { lat: observation.lat, lon: observation.lon } : { ...currentState?.loc };
-    const context = `${currentState?.selectedTime ? 'Selected' : 'Snapshot'}: ${detailDate.toISOString().slice(0, 19).replace('T', ' ')} UTC · ${finite(detailLoc.lat, 3)}° latitude, ${finite(detailLoc.lon, 3)}° longitude${detailLoc.name ? ` · ${detailLoc.name}` : ''}. Reopen to update.`;
+    const moving = ['satellite', 'plane'].includes(d.kind);
+    const context = moving ? `Tracking from ${finite(detailLoc.lat, 3)}° latitude, ${finite(detailLoc.lon, 3)}° longitude. Position estimates update while this page is visible.` : `${currentState?.selectedTime ? 'Selected' : 'Snapshot'}: ${detailDate.toISOString().slice(0, 19).replace('T', ' ')} UTC · ${finite(detailLoc.lat, 3)}° latitude, ${finite(detailLoc.lon, 3)}° longitude${detailLoc.name ? ` · ${detailLoc.name}` : ''}. Reopen to update.`;
     returnFocus = trigger;
     returnPanel = dockOpen ? returnFocus?.closest('[data-panel]')?.dataset.panel || tabs.find(tab => tab.getAttribute('aria-selected') === 'true')?.dataset.tab || null : null;
     returnObjectKey = returnFocus?.closest('[data-object-key]')?.dataset.objectKey || null;
@@ -285,20 +308,18 @@ export function createUI(handlers = {}) {
         if (nameRecord.aliasNote) card.append(node('p', nameRecord.aliasNote, 'meta'));
       }
     } else if (['star', 'sun', 'moon', 'planet', 'body', 'dso'].includes(d.kind)) card.append(node('p', 'Catalog name retained; no reviewed Hindi equivalent is included yet.', 'name-method meta'));
-    const rows = [['Type', d.kind], [d.kind === 'constellation' ? 'Anchor altitude / azimuth' : 'Altitude / azimuth', `${Number.isFinite(d.alt) ? fmtAlt(d.alt) : '—'} / ${finite(d.az, 1)}°`]];
+    const rows = [['Type', d.kind], ...(!moving ? [[d.kind === 'constellation' ? 'Anchor altitude / azimuth' : 'Altitude / azimuth', `${Number.isFinite(d.alt) ? fmtAlt(d.alt) : '—'} / ${finite(d.az, 1)}°`]] : [])];
     if (Number.isFinite(d.mag)) rows.push(['Magnitude', finite(d.mag, 1)]);
     if (Number.isFinite(d.phase)) rows.push(['Illuminated', `${finite(d.phase * 100)}%`]);
-    if (Number.isFinite(d.rangeKm)) rows.push(['Range', `${finite(d.rangeKm)} km`]);
-    if (Number.isFinite(d.distKm)) rows.push(['Distance', `${finite(d.distKm)} km`]);
-    if (d.altFt != null) rows.push(['Aircraft altitude', `${finite(d.altFt)} ft`]);
-    if (d.gsKt != null) rows.push(['Ground speed', `${finite(d.gsKt)} kt`]);
-    if (d.kind === 'plane' && utcStamp(d.positionAt)) rows.push(['Position timestamp', utcStamp(d.positionAt)]);
+    if (!moving && Number.isFinite(d.rangeKm)) rows.push(['Line-of-sight range', `${finite(d.rangeKm)} km`]);
     if (d.dim != null) rows.push(['Angular size', `${d.dim} arcmin`]);
     addRows(card, rows);
+    if (moving) card.append(node('div', null, 'moving-object-facts'));
     if (d.kind === 'constellation') card.append(node('p', d.description || 'Guidance targets the catalog label anchor, not a single star or full boundary. Stick figures are illustrative.', 'help'));
     if (d.alt < 0) card.append(node('p', 'Below the horizon at the selected time and location.', 'help warning'));
     const controls = node('div', null, 'inputrow');
-    controls.append(button('Guide to object', () => { handlers.locate?.({ ...d, label:d.name }); card.hidden = true; $('sky').focus(); }, 'primary'));
+    const guide = button('Guide to object', () => { handlers.locate?.({ ...d, label:d.name }); card.hidden = true; $('sky').focus(); }, 'primary');
+    guide.dataset.action = 'guide'; controls.append(guide);
     if (typeof d.id === 'string' && /^(star|body|dso|const|sat):/.test(d.id)) {
       const save = button(favouriteIds.has(d.id) ? 'Remove saved object' : 'Save object', () => {
         const nowSaved = handlers.toggleFavourite?.(d);
@@ -314,6 +335,10 @@ export function createUI(handlers = {}) {
       capture.id = 'castSkyObject'; capture.setAttribute('aria-describedby', 'castSkyObjectPrivacy');
       const privacy = node('p', 'Opens this frozen instant, observer and object in Studio. Coordinates remain in the link and browser history; no video, permissions, notes or birth data are shared.', 'help');
       privacy.id = 'castSkyObjectPrivacy'; card.append(capture, privacy);
+    }
+    if (moving) {
+      card.append(node('p', d.kind === 'satellite' ? 'This is a predicted orbital position, not a camera detection or visibility guarantee.' : 'Receiver coverage, altitude and estimated motion have uncertainty. This display is not for navigation.', 'help'));
+      card.hidden = false; updateMovingDetails(); heading.focus({ preventScroll: true }); return;
     }
     const events = node('section', null, 'object-events'); events.id = 'objectEvents';
     events.setAttribute('aria-live', 'polite'); events.setAttribute('aria-busy', 'true');
@@ -363,6 +388,153 @@ export function createUI(handlers = {}) {
     });
     el.replaceChildren(...items);
   }
+  function renderNearbyList(el, objects, empty, subtitle) {
+    const previous = new Map([...el.querySelectorAll('[data-object-key]')].map(control => [control.dataset.objectKey, control.closest('li')]));
+    const wanted = new Set();
+    for (const item of objects) {
+      const d = normalise(item), key = d.id;
+      if (!key) continue;
+      wanted.add(key); nearbyListObjects.set(key, d);
+      let row = previous.get(key);
+      if (!row) {
+        row = node('li');
+        const open = button('', event => {
+          const fresh = nearbyListObjects.get(key);
+          if (!fresh) { toast('This position is no longer current.'); return; }
+          if (handlers.selectNearby) handlers.selectNearby(key);
+          else showInfo(fresh, event.currentTarget);
+        }, 'object-row');
+        open.dataset.objectKey = key;
+        open.append(node('span', null, 'object-name'), node('span', null, 'sub'));
+        row.append(open); el.append(row);
+      }
+      setName(row.querySelector('.object-name'), d);
+      row.querySelector('.sub').textContent = subtitle(d);
+    }
+    for (const [key, row] of previous) if (!wanted.has(key)) {
+      if (row.contains(document.activeElement)) $('openNearby').focus({ preventScroll: true });
+      row.remove();
+    }
+    el.querySelectorAll('.empty').forEach(item => item.remove());
+    if (!wanted.size) el.append(node('li', empty, 'empty'));
+  }
+  const providerInfo = () => AIRCRAFT_PROVIDERS[currentState?.aircraftProvider] || AIRCRAFT_PROVIDERS.avioadsb;
+  function providerPolicy(provider) {
+    const seconds = Math.round(provider.intervalMs / 1000);
+    return provider.id === 'avioadsb'
+      ? `AvioADSB polls about every ${seconds} seconds while this page is visible. Anonymous access allows 100 requests per day per network and one request per 10 seconds. A full daily allowance lasts about 20 active minutes here; other users may share it. Polling pauses at a reported limit.`
+      : `adsb.fi is an experimental option: delivery has not been verified from this app. It is for personal, noncommercial use. Polling is about every ${seconds} seconds while this page is visible, below its documented one-request-per-second limit. There is no automatic fallback.`;
+  }
+  function showNearby(focus = true) {
+    setTab('traffic'); $('trafficDetails').open = true;
+    $('panelSky').scrollTop = 0;
+    if (focus) $('trafficDetails').querySelector('summary').focus({ preventScroll: true });
+  }
+  function updateConsent() {
+    const state = currentState;
+    if (!state) return;
+    const provider = providerInfo(), loc = state.loc;
+    $('aircraftProviderHelp').textContent = providerPolicy(provider);
+    if (attributedProvider !== provider.id) {
+      attributedProvider = provider.id;
+      const attribution = $('aircraftAttribution');
+      attribution.replaceChildren(document.createTextNode('Aircraft reports: '));
+      const source = node('a', provider.name); source.href = provider.homepage; attribution.append(source);
+      if (provider.id === 'avioadsb') {
+        const license = node('a', 'CC BY 4.0'); license.href = 'https://creativecommons.org/licenses/by/4.0/';
+        attribution.append(document.createTextNode(' · '), license);
+      } else attribution.append(document.createTextNode(' · personal, noncommercial use. Availability unverified.'));
+    }
+    if ($('planeConsent').hidden) return;
+    const validLocation = Number.isFinite(loc?.lat) && Number.isFinite(loc?.lon) && !loc.source?.startsWith('demo');
+    const range = state.aircraftRangeNm || 50;
+    $('planeConsentContext').textContent = `${provider.name} will receive ${finite(loc?.lat, 3)}° latitude, ${finite(loc?.lon, 3)}° longitude (rounded to three decimals), a ${range} nautical mile ground radius and your IP address. ${validLocation ? 'These are your selected coordinates.' : 'This is a demonstration location; choose your own location before enabling.'} Camera frames, notes and saved places are not uploaded.`;
+    $('planeConsentPolicy').textContent = providerPolicy(provider) + (state.selectedTime ? ' Return to now before enabling live aircraft.' : '');
+    $('confirmPlanes').disabled = !validLocation || !!state.selectedTime;
+  }
+  function requestPlaneToggle(enabled = !currentState?.layers?.planes) {
+    if (!enabled) {
+      consentProvider = null; $('planeConsent').hidden = true; handlers.setAircraftEnabled?.(false); return;
+    }
+    const provider = providerInfo();
+    if (consentedProviders.has(provider.id)) { handlers.setAircraftEnabled?.(true); return; }
+    consentProvider = provider.id;
+    $('setPlanes').checked = false; $('planeConsent').hidden = false;
+    showNearby(false); updateConsent();
+    ($('confirmPlanes').disabled ? $('nearbyLocation') : $('confirmPlanes')).focus({ preventScroll: true });
+    $('planeConsent').scrollIntoView({ block: 'nearest' });
+  }
+  $('toggleSatellites').addEventListener('click', () => handlers.toggleSatellites?.());
+  $('togglePlanes').addEventListener('click', () => requestPlaneToggle());
+  $('openNearby').addEventListener('click', () => showNearby());
+  $('openTrafficFromTools').addEventListener('click', () => showNearby());
+  $('confirmPlanes').addEventListener('click', () => {
+    if ($('confirmPlanes').disabled || consentProvider !== providerInfo().id) return;
+    consentedProviders.add(consentProvider); consentProvider = null;
+    $('planeConsent').hidden = true; handlers.setAircraftEnabled?.(true);
+    $('togglePlanes').focus({ preventScroll: true });
+  });
+  $('cancelPlanes').addEventListener('click', () => {
+    consentProvider = null; $('planeConsent').hidden = true;
+    $('setPlanes').checked = !!currentState?.layers?.planes; $('togglePlanes').focus({ preventScroll: true });
+  });
+  $('nearbyLocation').addEventListener('click', () => { setTab('settings'); $('locLat').focus(); });
+  function nearbyState(state) {
+    currentState = state;
+    const satsOn = !!state.layers.sats, planesOn = !!state.layers.planes;
+    const satUnavailable = state.tleMeta?.source === 'none' || (state.tleMeta && !state.tleMeta.count);
+    const satelliteLabel = !satsOn ? 'Off' : satUnavailable ? 'No data' : !state.tleMeta ? 'Loading' : state.tleMeta.stale ? 'Older data' : `On · ${state.sats?.length || 0}`;
+    const paused = ['paused', 'simulated', 'limited', 'location-needed'].includes(state.planeStatus) || !!state.selectedTime;
+    const planeLabel = !planesOn ? 'Off' : paused ? 'Paused' : ['error','unavailable'].includes(state.planeStatus) ? 'No data' : state.planeStatus === 'ok' ? `On · ${state.planes?.length || 0}` : 'Loading';
+    $('toggleSatellites').setAttribute('aria-pressed', String(satsOn));
+    $('togglePlanes').setAttribute('aria-pressed', String(planesOn));
+    $('satelliteToggleState').textContent = satelliteLabel; $('planeToggleState').textContent = planeLabel;
+    $('toggleSatellites').dataset.status = !satsOn ? 'off' : satUnavailable ? 'unavailable' : state.tleMeta ? 'on' : 'loading';
+    $('togglePlanes').dataset.status = !planesOn ? 'off' : state.planeStatus || 'loading';
+    $('setSats').checked = satsOn; $('setPlanes').checked = planesOn;
+    $('nearbySummary').textContent = `${state.selectedTime ? 'Simulated' : 'Current'} sky · ${state.loc?.source?.startsWith('demo') ? 'demo coordinates' : state.loc?.name || 'selected location'} · Satellites ${satelliteLabel.toLowerCase()} · Planes ${planeLabel.toLowerCase()}. Camera and Auto AR are independent.`;
+    const objects = [...(state.satelliteCatalogue || []), ...(state.aircraftReports || state.planes || []).map(item => ({ ...item, kind:'plane', name:item.flight }))];
+    nearbyListObjects = new Map(objects.map(item => [item.id, normalise(item)]));
+    nearbyAim(state.aimingCandidates || []);
+    updateConsent(); updateMovingDetails(); trackingStatus();
+  }
+  function nearbyAim(candidates = []) {
+    if ($('panelSky').hidden || !$('trafficDetails').open) return;
+    renderNearbyList($('aimingList'), candidates.slice(0, 3), 'No current tracked object matches this direction.', d => `${finite(d.angularDistance, 1)}° from view centre · ${d.kind === 'plane' ? 'aircraft report' : 'calculated satellite'}`);
+  }
+  function updateMovingDetails() {
+    if (!activeItem || card.hidden || !['satellite','plane'].includes(activeItem.kind)) return;
+    const target = card.querySelector('.moving-object-facts');
+    if (!target) return;
+    const d = nearbyListObjects.get(activeItem.id), guide = card.querySelector('[data-action="guide"]');
+    const isPlane = activeItem.kind === 'plane';
+    const enabled = currentState?.layers?.[isPlane ? 'planes' : 'sats'];
+    if (!d || !enabled || (isPlane && currentState?.selectedTime)) {
+      target.replaceChildren(node('p', !enabled ? 'This layer is off. Enable it to update this position.' : 'A current position is unavailable. The previous direction is no longer shown.', 'help warning'));
+      if (guide) guide.disabled = true; return;
+    }
+    const rows = [['Altitude / azimuth', `${fmtAlt(d.alt)} / ${d.azimuthDefined !== false && Number.isFinite(d.az) ? `${finite(d.az, 1)}°` : 'undefined overhead'}`]];
+    const age = Number.isFinite(d.positionAt) ? Math.max(0, (Date.now() - d.positionAt) / 1000) : null;
+    const fresh = d.overlayEligible !== false && age !== null && age <= 20;
+    const usable = !isPlane || (fresh && Number.isFinite(d.alt) && d.alt >= 0);
+    if (guide) guide.disabled = !usable;
+    if (isPlane) {
+      rows.push(['Line-of-sight range', `${finite(d.slantKm, 1)} km`], ['Ground distance', `${finite(d.distKm, 1)} km`],
+        ['Position age', age === null ? 'Unavailable' : `${Math.round(age)} s${fresh ? '' : ' · list only; too old for guidance'}`],
+        ['Position timestamp', utcStamp(d.positionAt) || 'Unavailable'], ['Provider', d.sourceName || providerInfo().name],
+        ['Aircraft altitude', `${finite(d.altFt)} ft · ${d.altitudeKind === 'geometric-wgs84' ? 'WGS84 geometric' : 'pressure altitude approximation'}`],
+        ['Ground speed', `${finite(d.gsKt)} kt`], ['Motion estimate', d.positionMode === 'extrapolated' ? `Extrapolated ${finite(d.extrapolatedSeconds, 1)} s` : d.positionMode === 'estimate-paused' ? `Estimate held at ${finite(d.extrapolatedSeconds ?? 15, 1)} s` : 'Reported position']);
+      if (d.type) rows.push(['Report type', d.type]);
+    } else {
+      rows.push(['Line-of-sight range', `${finite(d.rangeKm, 1)} km`], ['Calculated at', utcStamp(d.sampleTimeISO) || 'Unavailable'],
+        ['Orbital epoch', utcStamp(d.epochISO || d.epoch) || 'Unavailable'], ['Element age', `${finite(d.ageDays, 2)} days`],
+        ['Illumination estimate', d.illumination || 'Unavailable'], ['Sun altitude', Number.isFinite(d.observerSunAlt) ? `${finite(d.observerSunAlt, 1)}°` : 'Unavailable'],
+        ['Night candidate', d.visibility?.candidate ? 'Yes · actual visibility unknown' : (d.visibility?.reasons || ['Not established']).join('; ')]);
+    }
+    rows.push(['Observer height', `${finite(d.observerHeightM ?? currentState?.loc?.heightM ?? 0)} m · ${Number.isFinite(currentState?.loc?.heightM) ? 'WGS84 ellipsoid' : 'assumed; height unknown'}`]);
+    target.replaceChildren(); addRows(target, rows);
+    if (isPlane && d.alt < 0) target.append(node('p', 'Below the geometric horizon. This report remains in the nearby list, but sky guidance is unavailable.', 'help warning'));
+  }
   function skyList(bodies = [], stars = []) {
     renderList($('skyList'), [...bodies.map(b => ({ ...b, kind:b.kind || 'body' })), ...stars.map(s => ({ ...s, kind:'star' }))], 'No bright catalog objects above the horizon. Search includes the full supported catalog.');
   }
@@ -392,7 +564,7 @@ export function createUI(handlers = {}) {
     const attempted = utcStamp(meta?.lastAttemptAt);
     const check = orbitalCheckStatus(meta);
     $('satMeta').textContent = meta ? `${off ? 'Layer off · ' : ''}${meta.count ?? sats.length} elements · ${meta.source || 'unknown source'}${cached}${scope}${age}${fetched}${meta.stale ? ' · stale data' : ''}${meta.suppressed ? ` · ${meta.suppressed} older elements omitted` : ''}${attempted ? ` · last online attempt ${attempted}` : ''}${meta.error ? ' · last online check failed; available elements may be incomplete' : ''}${check ? ` · ${check}` : ''}` : off ? 'Satellites are off.' : 'Loading satellite data…';
-    renderList($('satList'), sats.slice(0, 12).map(s => ({ ...s, kind:'satellite' })), 'No tracked satellite above the horizon.', d => `${fmtAlt(d.alt)} · az ${finite(d.az)}° · ${finite(d.rangeKm)} km`);
+    renderNearbyList($('satList'), [...sats].sort((a, b) => a.rangeKm - b.rangeKm).slice(0, 20).map(s => ({ ...s, kind:'satellite' })), off ? 'Enable satellites to show calculated positions.' : currentState?.satelliteVisibility === 'all' ? 'No tracked satellite above the horizon.' : 'No sunlit night candidate in the available orbital data. Try All above the horizon.', d => `${fmtAlt(d.alt)} · ${finite(d.rangeKm)} km line of sight · ${d.illumination || 'illumination unavailable'}`);
   }
   function orbitalCheckStatus(meta) {
     const next = utcStamp(meta?.nextRefreshAt);
@@ -424,12 +596,12 @@ export function createUI(handlers = {}) {
     const age = timestamp ? Math.max(0, Math.round((Date.now() - timestamp) / 1000)) : null;
     const remaining = Number.isFinite(info?.remaining) ? ` · API reports ${info.remaining} requests remaining` : '';
     const retry = utcStamp(info?.retryAt), retryPending = retry && new Date(info.retryAt).getTime() > Date.now();
-    const provider = utcStamp(info?.providerAt);
+    const provider = utcStamp(info?.providerAt), source = providerInfo().name;
     const limited = `Aircraft polling has stopped at the API limit.${remaining ? ` ${remaining.slice(3)}.` : ''} ${retryPending ? `Wait until ${retry}, then turn the aircraft feed off and on to retry.` : retry ? 'The indicated wait has elapsed. Turn the aircraft feed off and on to retry.' : 'Wait for the API allowance to reset, then turn the aircraft feed off and on to retry.'} Other users on your network may share this allowance.`;
-    $('planeMeta').textContent = status === 'ok' ? `${planes.length} in 50 nautical miles · response received ${age ?? '—'} s ago${provider ? ` · provider snapshot ${provider}` : ''}${remaining}` : status === 'limited' ? limited : status === 'error' ? 'Aircraft feed unavailable. Last positions may be stale; retrying.' : status === 'paused' ? 'Aircraft feed paused.' : status === 'simulated' ? 'Aircraft feed is paused during simulated time. Return to now to resume.' : status === 'location-needed' ? 'Set your own location in Settings before enabling aircraft requests.' : 'Aircraft feed is off.';
-    renderList($('planeList'), planes.slice(0, 12).map(p => ({ ...p, kind:'plane' })), status === 'ok' ? 'No recent aircraft positions returned.' : status === 'limited' ? 'No current aircraft positions while polling is paused.' : 'Enable the optional feed above to request live aircraft.', d => {
+    $('planeMeta').textContent = `${source} · ` + (status === 'ok' ? `${planes.length} recent reports within ${currentState?.aircraftRangeNm || 50} nautical miles · response received ${age ?? '—'} s ago${provider ? ` · provider snapshot ${provider}` : ''}${remaining}. Coverage is incomplete.` : status === 'limited' ? limited : status === 'unavailable' ? `Aircraft feed unavailable${info?.httpStatus ? ` (HTTP ${info.httpStatus})` : ''}. This provider has not supplied usable data; there is no automatic switch.` : status === 'error' ? 'Aircraft feed unavailable. Requests will retry with a delay; old reports expire.' : status === 'paused' ? 'Aircraft feed paused.' : status === 'simulated' ? 'Aircraft feed is paused during simulated time. Return to now to resume.' : status === 'location-needed' ? 'Set your own location in Settings before enabling aircraft requests.' : status === 'loading' ? 'Requesting nearby reports…' : 'Aircraft feed is off.');
+    renderNearbyList($('planeList'), planes.slice(0, 20).map(p => ({ ...p, kind:'plane', name:p.flight })), status === 'ok' ? 'No recent aircraft positions returned. This does not establish an empty sky.' : status === 'limited' ? 'No current aircraft positions while polling is paused.' : 'Enable the optional feed above to request nearby aircraft.', d => {
       const positionAge = Number.isFinite(d.positionAt) ? Math.max(0, Math.round((Date.now() - d.positionAt) / 1000)) : null;
-      return `${d.altFt == null ? 'Altitude unavailable' : `${finite(d.altFt)} ft`} · ${finite(d.distKm)} km ${Number.isFinite(d.az) ? compass16(d.az) : ''} · ${positionAge == null ? 'position age unavailable' : `position age ${positionAge} s`}`;
+      return `${finite(d.distKm, 1)} km over ground · ${finite(d.slantKm, 1)} km line of sight · ${positionAge == null ? 'position age unavailable' : `position age ${positionAge} s${positionAge > 20 ? ' · list only' : ''}`} · ${d.altitudeKind === 'barometric-approximate' ? 'pressure altitude estimate' : 'geometric altitude'}`;
     });
   }
   function tonight(t) {
@@ -471,10 +643,14 @@ export function createUI(handlers = {}) {
       chip.classList.toggle('on', on); chip.setAttribute('aria-pressed', String(on));
     });
     for (const [id, key] of [['setGrid','grid'], ['setLabels','labels'], ['setSats','sats'], ['setPlanes','planes']]) $(id).checked = !!state.layers[key];
+    $('aircraftProvider').value = state.aircraftProvider || 'avioadsb';
+    $('aircraftRangeNm').value = String(state.aircraftRangeNm || 50);
+    $('satelliteVisibility').value = state.satelliteVisibility || 'night';
     $('setNight').checked = !!state.night;
-    trackingStatus();
-    if (state.loc && !['locLat', 'locLon'].includes(document.activeElement?.id)) {
+    nearbyState(state);
+    if (state.loc && !['locLat', 'locLon', 'locHeight'].includes(document.activeElement?.id)) {
       $('locLat').value = finite(state.loc.lat, 5); $('locLon').value = finite(state.loc.lon, 5);
+      $('locHeight').value = Number.isFinite(state.loc.heightM) ? state.loc.heightM : '';
     }
     if (changedNameMode) {
       savedSignature = '';
@@ -502,9 +678,20 @@ export function createUI(handlers = {}) {
       const update = () => { $(output).textContent = input.value + (key === 'magLimit' ? '' : '°'); input.setAttribute('aria-valuetext', $(output).textContent); };
       update(); input.addEventListener('input', () => { update(); onChange({ [key]: Number(input.value) }); });
     }
-    for (const [id, key] of [['setGrid','grid'], ['setLabels','labels'], ['setSats','sats'], ['setPlanes','planes']]) {
+    for (const [id, key] of [['setGrid','grid'], ['setLabels','labels']]) {
       $(id).addEventListener('change', () => { onChange({ layers:{ ...state.layers, [key]:$(id).checked } }); syncSettings(state); });
     }
+    $('setSats').addEventListener('change', () => { if ($('setSats').checked !== !!state.layers.sats) handlers.toggleSatellites?.(); });
+    $('setPlanes').addEventListener('change', () => requestPlaneToggle($('setPlanes').checked));
+    $('aircraftProvider').addEventListener('change', () => {
+      const provider = $('aircraftProvider').value;
+      consentProvider = null; $('planeConsent').hidden = true;
+      handlers.setAircraftEnabled?.(false);
+      onChange({ aircraftProvider:provider, layers:{ ...state.layers, planes:false } });
+      syncSettings(state); toast('Provider changed. Turn Planes on to review this recipient before sharing coordinates.');
+    });
+    $('aircraftRangeNm').addEventListener('change', () => { onChange({ aircraftRangeNm:Number($('aircraftRangeNm').value) }); syncSettings(state); });
+    $('satelliteVisibility').addEventListener('change', () => { onChange({ satelliteVisibility:$('satelliteVisibility').value }); syncSettings(state); });
     $('setNight').addEventListener('change', () => { onChange({ night:$('setNight').checked }); syncSettings(state); });
     $('nameMode').addEventListener('change', () => { onChange({ nameMode:$('nameMode').value }); syncSettings(state); });
     $('toggleHindiNames').addEventListener('click', () => {
@@ -516,11 +703,12 @@ export function createUI(handlers = {}) {
       for (const [id, value, output] of [['setFov',70,'fovVal'], ['setHeading',0,'headingVal'], ['setPitch',0,'pitchVal']]) { $(id).value = value; $(output).textContent = value + '°'; $(id).setAttribute('aria-valuetext', value + '°'); }
       toast('Calibration reset to estimated 70° diagonal field of view.');
     });
-    if (state.loc) { $('locLat').value = finite(state.loc.lat, 5); $('locLon').value = finite(state.loc.lon, 5); }
+    if (state.loc) { $('locLat').value = finite(state.loc.lat, 5); $('locLon').value = finite(state.loc.lon, 5); $('locHeight').value = Number.isFinite(state.loc.heightM) ? state.loc.heightM : ''; }
     $('locationForm').addEventListener('submit', event => {
       event.preventDefault(); const lat = Number($('locLat').value), lon = Number($('locLon').value);
       if (!$('locationForm').reportValidity() || !Number.isFinite(lat) || !Number.isFinite(lon)) return;
-      onChange({ loc:{ lat, lon, source:'manual' } }); toast('Location updated.');
+      const heightM = $('locHeight').value.trim() ? Number($('locHeight').value) : null;
+      onChange({ loc:{ lat, lon, heightM, heightAccuracyM:null, source:'manual' } }); toast('Location updated.');
     });
     $('locGps').addEventListener('click', () => handlers.relocate?.());
     $('saveLocationForm').addEventListener('submit', async event => {
@@ -644,5 +832,5 @@ export function createUI(handlers = {}) {
     clearTimeout(toastTimer);
     detailRequest++;
   }
-  return { toast, statusDot, telemetry, compassTape, trackingState, cameraState, showInfo, handoffStatus, skyList, searchResults, satList, planeList, tonight, bindChips, bindSettings, syncSettings, onboarding, saved, setDock, setTab, orbit:renderOrbit, dispose };
+  return { toast, statusDot, telemetry, compassTape, trackingState, cameraState, nearbyState, nearbyAim, showInfo, handoffStatus, skyList, searchResults, satList, planeList, tonight, bindChips, bindSettings, syncSettings, onboarding, saved, setDock, setTab, orbit:renderOrbit, dispose };
 }

@@ -1,15 +1,16 @@
 // Deterministic provider policy/lifecycle tests; all HTTP and storage are mocked.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 const CACHE = 'skylens.tle.v1', ATTEMPT = 'skylens.tle.attempt.v1', TWO_HOURS = 7200000;
 const START = Date.parse('2026-10-05T00:00:00Z');
-const TLE = 'ISS (ZARYA)\n1 25544U 98067A   26278.00000000  .00009133  00000+0  17025-3 0  9997\n2 25544  51.6331 331.8814 0007668  72.6488 287.5339 15.49570248582031\n';
-const lines = TLE.trim().split('\n');
-const item = { name: lines[0], l1: lines[1], l2: lines[2] };
+// Genuine checksummed legacy row exercises cache/snapshot migration.
+const item = JSON.parse(readFileSync(new URL('../data/tle-snapshot.json', import.meta.url))).satellites[0];
+const OMM = readFileSync(new URL('./fixtures/iss-omm.json', import.meta.url), 'utf8');
 let sequence = 0;
 const moduleFresh = () => import(`../js/satellites.js?tracking-test=${++sequence}`);
-const ok = (body = TLE) => ({ status: 200, ok: true, text: async () => body });
+const ok = (body = OMM) => ({ status: 200, ok: true, text: async () => body });
 const snapshot = () => ({ status: 200, ok: true, json: async () => ({ fetchedAt: '2026-08-22T12:00:00Z', satellites: [item] }) });
 
 async function environment(t, initial = {}) {
@@ -18,7 +19,7 @@ async function environment(t, initial = {}) {
   const values = new Map(Object.entries(initial).map(([k, v]) => [k, JSON.stringify(v)]));
   const writes = [];
   globalThis.localStorage = { getItem: key => values.get(key) || null, setItem: (key, value) => { writes.push(key); values.set(key, value); } };
-  globalThis.window = { satellite: { twoline2satrec: () => ({ no: 1 }), gstime: () => 0,
+  globalThis.window = { satellite: { twoline2satrec: () => ({ no: 1 }), json2satrec: () => ({ no: 1 }), gstime: () => 0,
     propagate: () => ({ position: { x: 6800, y: 0, z: 0 } }), eciToEcf: value => value,
     ecfToLookAngles: () => ({ elevation: 1, azimuth: 1, rangeSat: 500 }) } };
   Date.now = () => now;
@@ -36,12 +37,28 @@ test('simultaneous requests share one sequence; successful groups and manual che
   assert.equal(a, b);
   const result = await a;
   assert.equal(requests.length, 2);
+  assert.ok(requests.every(url => url.endsWith('FORMAT=JSON')));
   assert.equal(result.count, 1, 'duplicate ISS in groups is deduplicated');
   assert.deepEqual(result.groupsLoaded, ['stations', 'visual']);
   assert.equal(result.partial, false); assert.equal(result.fetchedAt, START);
   assert.equal(result.nextRefreshAt, START + TWO_HOURS);
   assert.equal((await env.module.initSatellites()).source, 'cache');
   assert.equal(requests.length, 2);
+});
+
+test('passive metadata and propagation mark cache stale across two hours without network requests', async t => {
+  const env = await environment(t);
+  let requests = 0;
+  globalThis.fetch = async () => { requests++; return ok(); };
+  await env.module.initSatellites();
+  assert.equal(env.module.satMeta().cacheStale, false);
+  env.setNow(START + TWO_HOURS - 1);
+  assert.equal(env.module.satMeta().cacheStale, false);
+  env.setNow(START + TWO_HOURS);
+  assert.equal(env.module.satMeta().cacheStale, true);
+  env.module.propagateNow(new Date(START + TWO_HOURS), 0, 0);
+  assert.equal(env.module.satMeta().stale, true);
+  assert.equal(requests, 2);
 });
 
 test('HTTP 403 stops remaining groups, retains expired successful cache, and persists cooldown across reload', async t => {

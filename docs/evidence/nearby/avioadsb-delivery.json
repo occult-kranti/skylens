@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-05T22:25:55.108Z",
+  "origin": "https://occult-kranti.github.io",
+  "conditions": "One real browser GET per provider, fixed public London point,25NM. No retries. Synthetic page at real Pages security origin; not release proof.",
+  "feeds": [
+    {
+      "id": "avioadsb",
+      "url": "https://avioadsb.org/v1/point/51.507/-0.128/25",
+      "status": 200,
+      "browserReadable": true,
+      "elapsedMs": 879.2000000029802,
+      "headers": {
+        "content-type": "application/json",
+        "x-avioadsb-tier": "anonymous",
+        "x-license": "CC-BY-4.0; personal and research use only",
+        "x-ratelimit-limit": "100",
+        "x-ratelimit-policy": "1;w=10, 100;w=86400",
+        "x-ratelimit-remaining": "99",
+        "x-ratelimit-reset": "5643"
+      },
+      "keys": [
+        "ac",
+        "msg",
+        "now",
+        "total",
+        "ctime",
+        "ptime"
+      ],
+      "now": 1791239156118,
+      "ctime": 1791239155211,
+      "count": 0,
+      "fields": [],
+      "sample": null,
+      "nonJSON": null
+    }
+  ]
+}

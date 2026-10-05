@@ -22,6 +22,11 @@
     <div id="cTL"><span id="brand">SKYLENS<span class="brand-caption">PERSONAL OBSERVATORY</span></span><span id="telTime">Current sky · UTC</span></div>
     <div id="cTR"><span id="telAim">Manual sky</span><span id="telPos">Demo: New York · choose your location</span><span id="telCount" class="sr-only"></span></div>
   </header>
+  <nav id="nearbyControls" aria-label="Nearby sky layers">
+    <button id="toggleSatellites" type="button" aria-pressed="false" aria-describedby="satHelp"><span>Satellites</span><small id="satelliteToggleState">Off</small></button>
+    <button id="togglePlanes" type="button" aria-pressed="false" aria-describedby="aircraftPrivacy"><span>Planes</span><small id="planeToggleState">Off</small></button>
+    <button id="openNearby" type="button" aria-controls="trafficDetails">Nearby<br>status</button>
+  </nav>
 
   <section id="infocard" aria-label="Selected object" hidden></section>
   <div id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
@@ -61,6 +66,42 @@
 
       <section class="panel active" id="panelSky" role="tabpanel" aria-labelledby="tabSky" data-panel="sky">
         <p id="skyHandoffStatus" class="help" role="status" hidden></p>
+        <section id="nearbySection" aria-label="Nearby sky tracking">
+        <details id="trafficDetails"><summary>Nearby satellites &amp; aircraft</summary>
+          <p id="nearbySummary" class="help">Choose a layer above. Camera and Auto AR are optional.</p>
+          <h3 class="sect">In this direction</h3><ul id="aimingList"><li class="empty">Enable a nearby layer to find calculated matches to your view.</li></ul>
+          <p class="meta">Direction matches are calculated, not recognized from camera images. Coverage and alignment are approximate.</p>
+          <h3 class="sect">Satellites</h3>
+          <div class="setrow"><label for="setSats">Show satellites</label><input type="checkbox" id="setSats" aria-describedby="satHelp"></div>
+          <label for="satelliteVisibility">Satellite filter</label>
+          <select id="satelliteVisibility"><option value="night">Sunlit night candidates</option><option value="all">All above the horizon</option></select>
+          <p id="satHelp" class="help">Calculated with CelesTrak elements and SGP4. Night candidates are above the geometric horizon, fully sunlit, with the Sun at or below −6°. Brightness, cloud and actual visibility are not established. Orbital elements older than seven days are omitted.</p>
+          <p class="meta" id="satMeta">Satellites are off.</p><ul id="satList"></ul>
+          <button id="refreshSatellites" type="button" aria-describedby="satRefreshPolicy satRefreshStatus">Check orbital data</button>
+          <p id="satRefreshPolicy" class="help">Online checks are spaced at least two hours apart; cached or dated bundled data may be used. Checking does not turn this layer on. No observer coordinates are sent for orbital data.</p>
+          <p id="satRefreshStatus" class="meta" role="status">Source, element age and the next available check appear here.</p>
+          <h3 class="sect">Nearby aircraft</h3>
+          <label for="aircraftProvider">Aircraft data provider</label>
+          <select id="aircraftProvider"><option value="avioadsb">AvioADSB</option><option value="adsbfi">adsb.fi · experimental, unverified</option></select>
+          <label for="aircraftRangeNm">Aircraft ground radius</label>
+          <select id="aircraftRangeNm"><option value="25">25 nautical miles · 46 km</option><option value="50">50 nautical miles · 93 km</option><option value="100">100 nautical miles · 185 km</option></select>
+          <p class="help">Radius is distance over the ground from your selected location. Satellite range is a separate line-of-sight distance.</p>
+          <div class="setrow"><label for="setPlanes">Enable aircraft feed</label><input type="checkbox" id="setPlanes" aria-describedby="aircraftPrivacy aircraftProviderHelp"></div>
+          <p id="aircraftPrivacy" class="help">Before enabling, review the chosen provider and location below. Enabling shares selected coordinates and your IP with that provider while this visible page polls. No camera frames are sent. There is no automatic provider switch. Community reports are incomplete and not for navigation.</p>
+          <p id="aircraftProviderHelp" class="help"></p>
+          <section id="planeConsent" class="consent-section" aria-labelledby="planeConsentTitle" hidden>
+            <h3 id="planeConsentTitle">Share this location for aircraft reports?</h3>
+            <p id="planeConsentContext" class="help"></p>
+            <p id="planeConsentPolicy" class="help"></p>
+            <div class="inputrow"><button id="confirmPlanes" class="primary" type="button">Enable this aircraft feed</button><button id="cancelPlanes" type="button">Cancel</button></div>
+            <button id="nearbyLocation" class="subtle" type="button">Choose location</button>
+          </section>
+          <p class="meta" id="planeMeta">Aircraft feed is off.</p><ul id="planeList"></ul>
+          <p class="help">Only reports no older than 20 seconds can appear on the sky. The list may retain reports up to 60 seconds with their age; these older reports cannot guide the overlay. Position accuracy and receiver coverage vary.</p>
+          <p id="aircraftAttribution" class="meta"></p>
+          <div class="feeds" aria-label="Feed status"><span class="f"><span class="dot st-off" id="dotTle" aria-hidden="true"></span><span id="tleStatus">Orbital data: off</span></span><span class="f"><span class="dot st-off" id="dotAdsb" aria-hidden="true"></span><span id="adsbStatus">Aircraft: off</span></span></div>
+        </details>
+        </section>
         <label for="objectSearch">Find a star, planet, constellation or deep-sky object</label>
         <input id="objectSearch" type="search" placeholder="Try चंद्रमा, Orion, Surya or M31" autocomplete="off" aria-describedby="searchMeta">
         <p id="searchMeta" class="meta" role="status">Search in Hindi, English or reviewed Romanized names, including objects below the horizon.</p>
@@ -121,20 +162,7 @@
           <a href="https://occult-kranti.github.io/astrology-sim-ant/pages/workbench.html"><span>Full Workbench</span><small>Traditional astrology tools and their methods</small></a>
         </nav>
         <p class="meta">Astrological interpretation is a traditional system, separate from the measured astronomical positions in SkyLens.</p>
-        <details id="trafficDetails"><summary>Optional satellites &amp; aircraft</summary>
-        <p class="help">Celestial calculations work without these feeds. Live data can be delayed or unavailable.</p>
-        <div class="setrow"><label for="setSats">Show satellites</label><input type="checkbox" id="setSats" aria-describedby="satHelp"></div>
-        <p id="satHelp" class="help">Uses CelesTrak orbital elements or a dated bundled snapshot. A calculated position does not imply a satellite is illuminated or visible.</p>
-        <p class="meta" id="satMeta">Satellites are off.</p><ul id="satList"></ul>
-        <button id="refreshSatellites" type="button" aria-describedby="satRefreshPolicy satRefreshStatus">Check orbital data</button>
-        <p id="satRefreshPolicy" class="help">Online orbital-data checks are spaced at least two hours apart. Until the next check is due, this action uses the available cache. Checking does not turn the satellite layer on.</p>
-        <p id="satRefreshStatus" class="meta" role="status">The source, element age and next available check appear below each check.</p>
-        <div class="setrow"><label for="setPlanes">Enable aircraft feed</label><input type="checkbox" id="setPlanes" aria-describedby="aircraftPrivacy"></div>
-        <p id="aircraftPrivacy" class="help">Enabling sends your selected latitude and longitude, rounded to 3 decimal places, to AvioADSB about every 12 seconds while this page is visible and the feed is enabled, including when you open another panel. Requests pause during simulated time and require a location you selected. No camera frames are sent. Community data is not for navigation.</p>
-        <p class="help">No account is required. AvioADSB allows anonymous access at one request per 10 seconds and 100 requests per day, shared with other users on your network. A full daily allowance lasts about 20 minutes at this app's 12-second interval. Polling stops when the API reports a limit; wait for the indicated time, then turn this feed off and on to retry.</p>
-        <p class="meta" id="planeMeta">Aircraft feed is off.</p><ul id="planeList"></ul>
-        <div class="feeds" aria-label="Feed status"><span class="f"><span class="dot st-off" id="dotTle" aria-hidden="true"></span><span id="tleStatus">TLE: off</span></span><span class="f"><span class="dot st-off" id="dotAdsb" aria-hidden="true"></span><span id="adsbStatus">Aircraft: off</span></span></div>
-        </details>
+        <button id="openTrafficFromTools" type="button">Nearby satellites &amp; aircraft</button>
       </section>
 
       <section class="panel" id="panelSaved" role="tabpanel" aria-labelledby="tabSaved" data-panel="saved" hidden>
@@ -150,7 +178,8 @@
         <select id="nameMode" aria-describedby="nameModeHelp"><option value="bilingual">हिन्दी + English</option><option value="hi">हिन्दी</option><option value="en">English</option></select>
         <p id="nameModeHelp" class="help">Reviewed Hindi names are shown where available. Other catalog names stay in English. Transliterations and traditional aliases are identified in object details; the rest of the interface is in English. <a href="docs/hindi-names.md">Hindi naming sources and scope</a>.</p>
         <h3 class="sect">Location</h3><p id="locationStatus" class="help">Demo location: New York. Set a location to see your own sky.</p>
-        <form id="locationForm"><div class="locationFields"><div><label for="locLat">Latitude (° north)</label><input id="locLat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></div><div><label for="locLon">Longitude (° east)</label><input id="locLon" type="number" min="-180" max="180" step="any" inputmode="decimal" required></div></div><div class="inputrow"><button id="setLoc" type="submit">Set location</button><button id="locGps" type="button">Use my location</button></div></form>
+        <form id="locationForm"><div class="locationFields"><div><label for="locLat">Latitude (° north)</label><input id="locLat" type="number" min="-90" max="90" step="any" inputmode="decimal" required></div><div><label for="locLon">Longitude (° east)</label><input id="locLon" type="number" min="-180" max="180" step="any" inputmode="decimal" required></div><div class="observer-height"><label for="locHeight">Observer height (WGS84 ellipsoid metres)</label><input id="locHeight" type="number" min="-500" max="10000" step="any" inputmode="decimal" aria-describedby="observerHeightHelp" placeholder="Unknown"></div></div><div class="inputrow"><button id="setLoc" type="submit">Set location</button><button id="locGps" type="button">Use my location</button></div></form>
+        <p id="observerHeightHelp" class="help">Optional height above the WGS84 ellipsoid, not height above sea level. Leave blank if unknown; tracking then estimates 0 m. Device height can be uncertain.</p>
         <p class="help">Location is used for calculations on this device. It is sent externally only if you enable the aircraft feed.</p>
         <form id="saveLocationForm"><label for="savedLocationName">Name this location</label><div class="inputrow"><input id="savedLocationName" type="text" maxlength="40" required placeholder="Home, observatory, mountain…" autocomplete="off" aria-describedby="savedLocationStatus"><button id="saveLocation" type="submit">Save this location</button></div><p id="savedLocationStatus" class="meta" role="status">Uses the selected coordinates above. Stored only in this browser.</p></form>
         <details id="alignmentDetails"><summary>Alignment &amp; camera calibration</summary>
@@ -167,7 +196,7 @@
         <div class="feeds"><span class="f"><span class="dot st-off" id="dotCam" aria-hidden="true"></span><span id="camFeedStatus">Camera: off</span></span><span class="f"><span class="dot st-off" id="dotMotion" aria-hidden="true"></span><span id="motionFeedStatus">Motion: off</span></span></div>
         <details><summary>Methods, data &amp; privacy</summary><div class="about">
           <p>SkyLens calculates positions from time, location, catalog data and sensors. A label does not establish that an object is visible through cloud or daylight. Camera frames remain on this device.</p>
-          <p>Ephemerides &amp; events: <a href="https://github.com/cosinekitty/astronomy">Astronomy Engine</a> (MIT). Stars: HYG Database v4.1. Constellations &amp; Messier objects: d3-celestial (BSD, © Olaf Frohn). Satellites: <a href="https://celestrak.org">CelesTrak</a> elements and satellite.js SGP4 (MIT). Aircraft: <a href="https://avioadsb.org">AvioADSB</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>).</p>
+          <p>Ephemerides &amp; events: <a href="https://github.com/cosinekitty/astronomy">Astronomy Engine</a> (MIT). Stars: HYG Database v4.1. Constellations &amp; Messier objects: d3-celestial (BSD, © Olaf Frohn). Satellites: <a href="https://celestrak.org">CelesTrak</a> elements and satellite.js SGP4 (MIT). Aircraft providers: <a href="https://adsb.fi">adsb.fi</a> (personal, noncommercial use) or <a href="https://avioadsb.org">AvioADSB</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>).</p>
           <p>Source catalogs and orbital data may be incomplete or stale. Live camera alignment still needs calibration and physical-device verification.</p>
           <a href="test.html?auto=1" id="selftestLink" target="_blank" rel="noopener">Run diagnostics &amp; stress tests ↗</a>
         </div></details>
