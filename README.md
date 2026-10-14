@@ -85,3 +85,9 @@ This list distinguishes required setup from optional expansion. No account or AP
 **Constellation names:** all 88 IAU constellations (89 catalogue figure entries because Serpens has two parts) now have Hindi transliterations, English aliases and search. Details explain that guidance points to a label anchor, not a physical star or official boundary. Saptarshi, Pleiades and zodiac sectors are not silently treated as equivalent whole constellations.
 
 Source, licensing, quota and actual browser-delivery evidence: [tracking APIs](docs/tracking-apis.md). The public feeds were browser-readable in the dated release diagnostic; this is not a promise of uninterrupted service or complete coverage.
+
+## Earth explorer update
+
+The [Globe](globe.html) now includes offline city/coordinate navigation, shareable camera views, an optional map filter and a night display palette. Open **Objects & data** for place navigation and loaded-object search; **Data & coverage** contains sharing, appearance and explicit source controls. Sharing transfers only the visual view, never feed permission, receiver endpoints or your saved sky observer. Empty/stale/unavailable reports remain visible as distinct states.
+
+See [implementation and verification](docs/gods-eye-integration.md) and the [God’s Eye View reference/license review](docs/gods-eye-view-reference.md). The static site needs no service running on your laptop. Run `npm test`, `node tests/browser-explorer.mjs` and the existing browser suites before release. For a preinstalled Chromium, set `PLAYWRIGHT_EXECUTABLE_PATH` to its executable. `node tools/package-static.mjs /absolute/output` stages hostable assets without test tools or credentials.

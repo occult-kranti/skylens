@@ -271,7 +271,9 @@ try {
       await shot(page, label, 'selected');
       await page.locator('#globeFollow').click(); assert.equal(await page.locator('#globeFollow').getAttribute('aria-pressed'), 'true');
       await closePanel(page); await page.locator('#globeStopFollow').waitFor({ state: 'visible' });
-      const beforeFollow = await centre(page); await page.clock.fastForward(16000);
+      // Keep interval callbacks in order: a single 16-second clock jump can
+      // legitimately age the old report out before the fixture fetch resolves.
+      const beforeFollow = await centre(page); await page.clock.runFor(16000);
       await page.waitForFunction(old => document.querySelector('#globeViewCoordinates').textContent !== old, beforeFollow);
       await drag(page); await page.locator('#globeStopFollow').waitFor({ state: 'hidden' });
       await page.locator('#globePlanes').click();
@@ -357,6 +359,9 @@ try {
       await objects(page); assert.equal(await page.locator('#globeList [data-object-id]').count(), 0, 'late response cannot restore stopped data');
       mode.receiver = 'cors-error'; await connect(page, 'readsb-v2'); await page.clock.fastForward(16000); await match(page, '#globeFeedStatus', /unavailable|error|failed/i);
       await shot(page, 'mobile', 'source-error');
+      mode.receiver = 'ok'; await page.clock.runFor(32000); await ready(page);
+      assert.doesNotMatch(await page.locator('#globeFeedDetails').textContent(), /could not be read|Next retry|HTTP failure/i,
+        'successful receiver recovery clears old failure and retry metadata');
       assert.equal(await page.evaluate(() => Object.values(localStorage).some(v => v.includes('receiver.example.org'))), false, 'custom endpoint is not persisted');
       await page.setViewportSize({ width: 320, height: 568 });
       const beforeNavigation = requests.length;
@@ -386,7 +391,7 @@ try {
       await page.locator('#globePlanes').click(); await page.locator('#globeDataPanel').waitFor();
       assert.equal(requests.length, beforeNavigation, 'roundtrip clears per-visit source consent and never replays the former receiver');
       assert.equal(await page.evaluate(() => window.__globeTest.geoCalls), 0, 'return navigation does not request device location');
-      await env.check(); completed.push('pinch and zoom bounds, location denial, receiver URL/schema/empty/CORS failure, hidden pause, stale follow/expiry, request abort and private endpoint handling');
+      await env.check(); completed.push('pinch and zoom bounds, location denial, receiver URL/schema/empty/CORS failure, hidden pause, stale follow/expiry, request abort, successful receiver error recovery and private endpoint handling');
     } catch (error) { await page.screenshot({ path: resolve(results, 'globe-lifecycle-failure.png'), fullPage: true }).catch(() => {}); throw error; }
     finally { await env.close(); }
   }
