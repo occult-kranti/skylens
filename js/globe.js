@@ -6,6 +6,7 @@ import { createGlobeUI } from './globe-ui.js';
 import { createTrafficFeed, refreshTrafficReports } from './traffic-feed.js';
 import { initSatellites, propagateNow, satMeta } from './satellites.js';
 import { getLocation } from './sensors.js';
+import { readGlobeView, shareGlobeView, filterGlobeObjects } from './globe-explorer.js';
 
 const validPoint = p => p && Number.isFinite(p.lat) && Math.abs(p.lat) <= 90 && Number.isFinite(p.lon) && Math.abs(p.lon) <= 180;
 const PREFS_KEY = 'skylens.preferences.v2';
@@ -20,6 +21,9 @@ const state = {
   objects: [], selectedId: null, following: false, skyURL: 'index.html?manual=1&nointro=1',
   satelliteMeta: null, satelliteStatus: 'off', night: preferences.night === true, loading: true, error: '',
 };
+const restoredView = readGlobeView(location.hash);
+if (restoredView) { state.view = createGlobeView({ ...state.view, ...restoredView }); state.night = restoredView.night; }
+state.mapFilter = { enabled: false, kind: 'all', query: '' };
 let reports = [], satellites = [], disposed = false, timer = null, frame = null;
 let aircraftConfig = null, aircraftToken = 0; // consent lasts only this page visit
 let orbitalController = null, orbitalToken = 0, orbitalReady = false, lastTrailTime = 0;
@@ -27,6 +31,9 @@ const trails = new Map();
 const feed = createTrafficFeed({ onUpdate(update) {
   if (disposed) return;
   state.feed = { ...state.feed, ...update };
+  if (update.status === 'ok') {
+    state.feed.error = ''; state.feed.retryAt = null; state.feed.httpStatus = null;
+  }
   // Loading/backoff is not a new snapshot. Keep a selected current report until
   // its own age expires, so every normal refresh does not interrupt Follow.
   if (update.status === 'ok' || update.status === 'off') reports = update.reports || [];
@@ -36,6 +43,13 @@ const feed = createTrafficFeed({ onUpdate(update) {
 function stopFollowing() { state.following = false; }
 function changedView(next) { stopFollowing(); state.view = next; requestDraw(); }
 const ui = createGlobeUI({
+  navigate: place => {
+    changedView(createGlobeView({ ...state.view, centerLat: place.lat, centerLon: place.lon, zoom: Math.max(4, state.view.zoom) }));
+    ui.announce(`Map centred on ${place.name}. Navigation does not load data or move your sky observer.`);
+  },
+  visualStyle: () => { state.night = !state.night; requestDraw(); },
+  shareView: () => shareGlobeView(location.href, state.view, state.night),
+  mapFilter: filter => { state.mapFilter = { ...filter }; requestDraw(); },
   zoom: factor => changedView(zoomGlobeView(state.view, factor)),
   rotate: (lon, lat) => changedView(rotateGlobeView(state.view, lon, lat)),
   resetView: () => changedView(createGlobeView({ ...state.view, centerLat: 15, centerLon: 0, zoom: 1 })),
@@ -77,6 +91,8 @@ function selectObject(id) {
   state.selectedId = id; stopFollowing(); trails.clear(); lastTrailTime = 0;
   state.view = createGlobeView({ ...state.view, centerLat: item.lat, centerLon: item.lon });
   refresh();
+  // Re-selecting the same row after Back must reopen its inspector too.
+  ui.openPanel('details');
 }
 async function startAircraft(config) {
   const token = ++aircraftToken;
@@ -146,7 +162,7 @@ function requestDraw() {
   frame = requestAnimationFrame(() => {
     frame = null; renderer.resize();
     state.view = createGlobeView({ ...state.view, width: renderer.width, height: renderer.height });
-    renderer.draw({ view: state.view, objects: state.objects, selectedId: state.selectedId, observer: state.observer,
+    renderer.draw({ view: state.view, objects: filterGlobeObjects(state.objects, state.mapFilter, state.selectedId), selectedId: state.selectedId, observer: state.observer,
       coverage: state.feed.coverage, trails, night: state.night });
     const stats = renderer.stats;
     if (stats) state.renderStats = stats;
@@ -174,6 +190,11 @@ function resume() {
   refresh();
 }
 const events = new AbortController();
+window.addEventListener('hashchange', () => {
+  const restored = readGlobeView(location.hash);
+  if (!restored) return;
+  state.night = restored.night; changedView(createGlobeView({ ...state.view, ...restored }));
+}, { signal: events.signal });
 window.addEventListener('resize', requestDraw, { signal: events.signal });
 document.addEventListener('visibilitychange', () => document.hidden ? suspend() : resume(), { signal: events.signal });
 window.addEventListener('pagehide', () => { suspend(); stopAircraft(); }, { signal: events.signal });

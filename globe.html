@@ -14,10 +14,10 @@
   <p id="globeHelp" class="sr-only">Drag to rotate Earth. Pinch, scroll, or use plus and minus to zoom. With the globe focused, arrow keys rotate, plus and minus zoom, and Home resets the world view. Manual navigation stops following an object. Search received objects for a text alternative. Moving the globe never loads aircraft data.</p>
 
   <header class="globe-header">
-    <div class="globe-heading"><h1>SKYLENS <span class="sr-only">Globe</span></h1><nav class="view-switch" aria-label="Observing view"><a id="globeViewSky" href="index.html">Sky</a><a id="globeViewGlobe" href="globe.html" aria-current="page">Globe</a></nav></div>
+    <div class="globe-heading"><div class="globe-brand"><span class="brand-orbit" aria-hidden="true"></span><div><h1>SKYLENS <span class="sr-only">Globe</span></h1><p class="brand-caption">Earth observatory</p></div></div><nav class="view-switch" aria-label="Observing view"><a id="globeViewSky" href="index.html">Sky</a><a id="globeViewGlobe" href="globe.html" aria-current="page">Globe</a></nav></div>
     <div class="globe-layers" role="group" aria-label="Globe layers">
-      <button id="globePlanes" type="button" aria-pressed="false"><span>Aircraft</span><small id="globePlanesState">Off</small></button>
-      <button id="globeSatellites" type="button" aria-pressed="false"><span>Satellites</span><small id="globeSatellitesState">Off</small></button>
+      <button id="globePlanes" type="button" aria-pressed="false"><span><span class="layer-dot aircraft-dot" aria-hidden="true"></span>Aircraft</span><small id="globePlanesState">Off</small></button>
+      <button id="globeSatellites" type="button" aria-pressed="false"><span><span class="layer-dot satellite-dot" aria-hidden="true"></span>Satellites</span><small id="globeSatellitesState">Off</small></button>
     </div>
     <button id="globeCoverage" type="button" aria-controls="globeDataPanel"><span id="globeFeedStatus">Aircraft off</span><small id="globeFeedMeta">Data &amp; coverage</small></button>
   </header>
@@ -40,13 +40,13 @@
         <button id="globeDataTab" type="button" role="tab" aria-selected="false" aria-controls="globeDataPanel" tabindex="-1">Data &amp; coverage</button>
       </div><button id="globePanelClose" type="button" aria-label="Close objects and data">Close</button></div>
       <section id="globeObjectsPanel" class="globe-panel-content" role="tabpanel" aria-labelledby="globeObjectsTab">
-        <label for="globeSearch">Search loaded objects</label><input id="globeSearch" type="search" placeholder="Name, callsign or identifier" autocomplete="off">
+        <div class="panel-intro"><p class="eyebrow">Explore the overhead world</p><h2>Explore Earth</h2><p class="help">Aircraft reports &amp; calculated satellite positions. You choose what to load.</p></div><form id="globePlaceForm" class="place-form"><label for="globePlaceSearch">Go to a place</label><div class="place-search-row"><input id="globePlaceSearch" type="search" list="globePlaces" placeholder="City or lat, lon" autocomplete="off" required><datalist id="globePlaces"></datalist><button type="submit">Go</button></div><p class="help">Search the built-in city list or enter coordinates.</p></form><label for="globeSearch">Search loaded objects</label><input id="globeSearch" type="search" placeholder="Name, callsign or identifier" autocomplete="off">
         <div id="globeListFilters" class="list-filters" role="group" aria-label="Filter loaded list">
           <button id="globeFilterAll" type="button" data-kind="all" aria-pressed="true">All <span data-filter-count>0</span></button>
           <button id="globeFilterPlanes" type="button" data-kind="plane" aria-pressed="false">Aircraft <span data-filter-count>0</span></button>
           <button id="globeFilterSatellites" type="button" data-kind="satellite" aria-pressed="false">Satellites <span data-filter-count>0</span></button>
         </div>
-        <p class="filter-scope help">Filters affect this list only.</p>
+        <label class="map-filter-label" for="globeFilterMap"><input id="globeFilterMap" type="checkbox">Apply object filters to map</label><p id="globeMapFilterStatus" class="filter-scope help">Filters affect this list only.</p>
         <p id="globeObjectsSummary" class="help">Load an aircraft area or enable satellites to explore received objects.</p>
         <button id="globeResetSearch" class="text-button" type="button" hidden>Reset search &amp; filters</button>
         <ul id="globeList" aria-label="Loaded objects"></ul>
@@ -60,7 +60,7 @@
         <button id="globeDetailsBack" class="text-button" type="button">← All loaded objects</button>
       </section>
       <section id="globeDataPanel" class="globe-panel-content" role="tabpanel" aria-labelledby="globeDataTab" hidden>
-        <h2>Know what is loaded</h2><p id="globeFeedDetails" class="help">The full globe is a navigation view, not a promise of worldwide aircraft coverage.</p>
+        <div class="view-actions"><button id="globeShareView" type="button">Share this view</button><button id="globeVisualStyle" type="button" aria-pressed="false">Night style</button></div><p class="help">Night style changes display colors only; it is not a sensor view.</p><input id="globeShareURL" type="text" readonly aria-label="Link to this map view" hidden><p class="eyebrow">Sources &amp; coverage</p><h2>Know what is loaded</h2><p id="globeFeedDetails" class="help">The full globe is a navigation view, not a promise of worldwide aircraft coverage.</p>
         <button id="globeStopAircraft" type="button">Stop aircraft feed</button>
         <p class="help">After connecting, the Aircraft switch resumes that same source and area during this visit. Moving the globe does not change the requested area.</p>
         <form id="globeAreaForm">

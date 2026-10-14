@@ -1,3 +1,5 @@
+import { GLOBE_PLACES, resolveGlobePlace, globeObjectMatches } from './globe-explorer.js';
+
 // SkyLens Globe controls. All remote values are text, never markup.
 const $ = id => document.getElementById(id);
 const finite = (v, digits = 1) => Number.isFinite(v) ? v.toFixed(digits) : '—';
@@ -68,6 +70,8 @@ export function createGlobeUI(handlers = {}) {
     const labels = { loading:'Loading aircraft', processing:'Processing reports', error:'Aircraft unavailable', unavailable:'Provider unavailable', limited:'API limit · paused', paused:'Aircraft paused', connecting:'Connecting receiver', 'location-needed':'Choose an area', off:'Choose an aircraft area' };
     if (['error','unavailable','limited'].includes(feed.status)) return labels[feed.status];
     if (!state.layers?.planes) return 'Aircraft off';
+    if (feed.status === 'ok' && counts.plane === 0) return 'No reports received';
+    if (feed.status === 'ok' && !state.objects.some(object => object.kind === 'plane' && object.overlayEligible !== false)) return 'Stale reports';
     return labels[feed.status] || (feed.coverage?.kind === 'regional' ? `Regional · ${feed.coverage.rangeNm ?? '—'} NM` : 'Receiver data');
   }
   function renderFeed() {
@@ -94,7 +98,7 @@ export function createGlobeUI(handlers = {}) {
     const query = $('globeSearch').value.trim().toLocaleLowerCase();
     const nextMatchKey = `${listKind}\n${query}`;
     if (matchedObjects !== state.objects || matchKey !== nextMatchKey) {
-      const matches = state.objects.filter(object => (listKind === 'all' || object.kind === listKind) && (!query || [object.name,object.id,object.flight,object.registration,object.hex].some(value => String(value || '').toLocaleLowerCase().includes(query))));
+      const matches = state.objects.filter(object => globeObjectMatches(object, { kind: listKind, query }));
       matchedObjects = state.objects; matchKey = nextMatchKey; matchedItems = matches.slice(0,80); matchedCount = matches.length;
     }
     const items = matchedItems, filtered = !!query || listKind !== 'all';
@@ -160,6 +164,12 @@ export function createGlobeUI(handlers = {}) {
     if (destroyed) return;
     state = { ...state, ...next, objects:Array.isArray(next.objects) ? next.objects : state.objects };
     document.body.classList.toggle('night', state.night === true);
+    if ($('globeVisualStyle')) { $('globeVisualStyle').setAttribute('aria-pressed', String(state.night === true)); $('globeVisualStyle').textContent = 'Night style'; }
+    if ($('globeMapFilterStatus')) {
+      const selected = state.objects.find(object => object.id === state.selectedId);
+      const retained = state.mapFilter?.enabled && selected && !globeObjectMatches(selected, state.mapFilter);
+      $('globeMapFilterStatus').textContent = !state.mapFilter?.enabled ? 'Filters apply to the list only.' : `Filters apply to map markers.${retained ? ' Selected object remains visible even outside the filter.' : ''} Loaded data and coverage are unchanged.`;
+    }
     if (indexedObjects !== state.objects) {
       indexedObjects = state.objects; currentObjects = new Map(); counts = { all:state.objects.length, plane:0, satellite:0 };
       for (const object of state.objects) { currentObjects.set(object.id,object); if (object.kind === 'plane' || object.kind === 'satellite') counts[object.kind]++; }
@@ -169,8 +179,8 @@ export function createGlobeUI(handlers = {}) {
     $('globeDensity').hidden = !(state.renderStats?.suppressedCount > 0);
     $('globeDensity').textContent = state.renderStats?.suppressedCount > 0 ? `Grouped view · zoom in or search all ${state.objects.length} loaded records` : '';
     for (const [id,key] of [['globePlanes','planes'],['globeSatellites','sats']]) $(id).setAttribute('aria-pressed',String(!!state.layers[key]));
-    $('globePlanesState').textContent = !state.layers.planes ? 'Off' : ['limited','paused'].includes(state.feed?.status) ? 'Paused' : ['error','unavailable'].includes(state.feed?.status) ? 'Unavailable' : 'On';
-    $('globeSatellitesState').textContent = !state.layers.sats ? 'Off' : state.satelliteStatus === 'loading' ? 'Loading' : ['error','unavailable'].includes(state.satelliteStatus) ? 'Unavailable' : state.satelliteStatus === 'older data' ? 'Older data' : 'On';
+    $('globePlanesState').textContent = !state.layers.planes ? 'Off' : ['limited','paused'].includes(state.feed?.status) ? 'Paused' : ['error','unavailable'].includes(state.feed?.status) ? 'Unavailable' : state.feed?.status === 'ok' && counts.plane === 0 ? 'No reports' : state.feed?.status === 'ok' && !state.objects.some(object => object.kind === 'plane' && object.overlayEligible !== false) ? 'Stale reports' : 'On';
+    $('globeSatellitesState').textContent = !state.layers.sats ? 'Off' : state.satelliteStatus === 'loading' ? 'Loading' : ['error','unavailable'].includes(state.satelliteStatus) ? 'Unavailable' : counts.satellite === 0 ? 'No current positions' : state.satelliteStatus === 'older data' ? 'Older data' : 'Calculated';
     renderFeed();
     if (state.selectedId !== lastSelected) {
       lastSelected = state.selectedId;
@@ -192,9 +202,27 @@ export function createGlobeUI(handlers = {}) {
     event.preventDefault(); const target = event.key === 'Home' ? 'objects' : event.key === 'End' ? 'data' : name;
     setPanel(target,true); $(target === 'objects' ? 'globeObjectsTab' : 'globeDataTab').focus();
   });
-  on($('globeSearch'),'input',renderList);
-  for (const button of $('globeListFilters').querySelectorAll('button')) on(button,'click',() => { listKind = button.dataset.kind; renderList(); });
-  on($('globeResetSearch'),'click',() => { listKind = 'all'; $('globeSearch').value = ''; renderList(); $('globeSearch').focus({ preventScroll:true }); });
+  function changedFilter() { invoke('mapFilter', { enabled: $('globeFilterMap')?.checked === true, kind: listKind, query: $('globeSearch').value.trim() }); renderList(); }
+  on($('globeSearch'),'input',changedFilter);
+  if ($('globeFilterMap')) on($('globeFilterMap'),'change',changedFilter);
+  if ($('globePlaces')) for (const place of GLOBE_PLACES) { const option = node('option'); option.value = place.name; $('globePlaces').append(option); }
+  if ($('globePlaceForm')) on($('globePlaceForm'),'submit',event => {
+    event.preventDefault(); const input = $('globePlaceSearch'), place = resolveGlobePlace(input.value);
+    input.setCustomValidity(place ? '' : 'Choose a listed city, or enter latitude, longitude (−90 to 90, −180 to 180).');
+    if (!place) { input.reportValidity(); return; }
+    invoke('navigate',place);
+  });
+  if ($('globePlaceSearch')) on($('globePlaceSearch'),'input',() => $('globePlaceSearch').setCustomValidity(''));
+  if ($('globeVisualStyle')) on($('globeVisualStyle'),'click',() => invoke('visualStyle'));
+  if ($('globeShareView')) on($('globeShareView'),'click',async () => {
+    const url = invoke('shareView'); if (!url) return;
+    const output = $('globeShareURL');
+    if (output) { output.hidden = false; output.value = url; output.focus(); output.select(); }
+    try { await navigator.clipboard.writeText(url); announce('View link copied. It contains only map coordinates, zoom and visual style; no data access or observer settings.'); }
+    catch { announce('Copy the selected view link. It contains only map coordinates, zoom and visual style.'); }
+  });
+  for (const button of $('globeListFilters').querySelectorAll('button')) on(button,'click',() => { listKind = button.dataset.kind; changedFilter(); });
+  on($('globeResetSearch'),'click',() => { listKind = 'all'; $('globeSearch').value = ''; changedFilter(); $('globeSearch').focus({ preventScroll:true }); });
   on($('globeZoomIn'),'click',() => invoke('zoom',1.4)); on($('globeZoomOut'),'click',() => invoke('zoom',1/1.4));
   on($('globeReset'),'click',() => invoke('resetView'));
   on($('globeLocation'),'click',() => invoke('useLocation'));
@@ -261,7 +289,7 @@ export function createGlobeUI(handlers = {}) {
   if (typeof ResizeObserver==='function') { resizeObserver=new ResizeObserver(measure); resizeObserver.observe(document.querySelector('.globe-header')); }
   providerHelp(); measure(); update(state);
   return { update,announce,openPanel:(name='objects')=>setPanel(name,true,true),
-    getInsets() { const panel=$('globePanel').getBoundingClientRect(),wide=matchMedia('(min-width:960px), (min-width:560px) and (max-height:540px)').matches; return {top:document.querySelector('.globe-header').getBoundingClientRect().bottom+12,left:74,right:wide&&panelOpen?innerWidth-panel.left+12:12,bottom:!wide&&panelOpen?innerHeight-panel.top+12:70}; },
+    getInsets() { const panel=$('globePanel').getBoundingClientRect(),wide=matchMedia('(min-width:960px), (min-width:560px) and (max-height:540px)').matches; return {top:document.querySelector('.globe-header').getBoundingClientRect().bottom+12,left:wide&&panelOpen?panel.right+12:12,right:80,bottom:!wide&&panelOpen?innerHeight-panel.top+12:70}; },
     dispose() { destroyed=true; clearTimeout(noticeTimer); resizeObserver?.disconnect(); listeners.splice(0).forEach(remove=>remove()); pointers.clear(); }
   };
 }

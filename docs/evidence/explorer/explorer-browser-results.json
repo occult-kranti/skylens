@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "completed": [
+    "small-mobile place validation, repeat share/clipboard denial, private URL removal, share restore consent, map filters, follow interruption, responsive controls",
+    "mobile place validation, repeat share/clipboard denial, private URL removal, share restore consent, map filters, follow interruption, responsive controls",
+    "landscape place validation, repeat share/clipboard denial, private URL removal, share restore consent, map filters, follow interruption, responsive controls",
+    "desktop place validation, repeat share/clipboard denial, private URL removal, share restore consent, map filters, follow interruption, responsive controls"
+  ],
+  "screenshots": [
+    "explorer-small-mobile-initial-world.png",
+    "explorer-small-mobile-initial-objects.png",
+    "explorer-small-mobile.png",
+    "explorer-mobile-initial-world.png",
+    "explorer-mobile-initial-objects.png",
+    "explorer-mobile.png",
+    "explorer-landscape-initial-world.png",
+    "explorer-landscape-initial-objects.png",
+    "explorer-landscape.png",
+    "explorer-desktop-initial-world.png",
+    "explorer-desktop-initial-objects.png",
+    "explorer-desktop.png"
+  ],
+  "error": null,
+  "evidence": "Headless Chromium with mocked provider HTTP, clipboard rejection and touch-capable viewports. Not physical phone testing or live coverage proof."
+}

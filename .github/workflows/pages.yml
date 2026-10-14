@@ -43,6 +43,8 @@ jobs:
         run: node tests/browser-nearby.mjs
       - name: Globe navigation, global feed and gesture journeys
         run: node tests/browser-globe.mjs
+      - name: Explorer sharing, filtering and responsive journeys
+        run: node tests/browser-explorer.mjs
       - name: Keep browser verification evidence
         if: always()
         uses: actions/upload-artifact@v4
